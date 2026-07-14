@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .full-width,
+:host ::ng-deep .full-width .p-inputnumber-input,
+:host ::ng-deep .full-width.p-multiselect {
+  width: 100%;
+}
+
+/* wrap selected-user chips in the multiselect label area */
+:host ::ng-deep .p-multiselect .p-multiselect-label {
+  white-space: normal;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}

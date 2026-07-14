@@ -1,0 +1,56 @@
+<div class="layout" [class.layout-collapsed]="collapsed()">
+  <aside class="layout-sidebar">
+    <div class="sidebar-header">
+      <a class="app-logo">
+        <span class="logo-mark">U</span>
+        <span class="app-name">UWA</span>
+      </a>
+      <button type="button" class="sidebar-toggle" (click)="toggleCollapsed()" aria-label="收合選單">
+        <i class="pi" [class.pi-angle-left]="!collapsed()" [class.pi-angle-right]="collapsed()"></i>
+      </button>
+    </div>
+
+    <nav class="layout-menu">
+      <span class="menu-section">選單 MENU</span>
+      <ul class="menu-list">
+        @for (group of navGroups(); track group.label) {
+          <li class="menu-item">
+            <button type="button" class="menu-link" (click)="toggleGroup(group)"
+                    [class.active-group]="group.expanded && group.children.length">
+              <i class="menu-icon" [class]="group.icon"></i>
+              <span class="menu-text">{{ group.label }}</span>
+              <i class="submenu-toggler pi pi-angle-down" [class.collapsed]="!group.expanded"></i>
+            </button>
+
+            @if (group.expanded && group.children.length) {
+              <ul class="submenu">
+                @for (child of group.children; track child.label) {
+                  <li>
+                    @if (child.route) {
+                      <a class="menu-link submenu-link" [routerLink]="child.route" routerLinkActive="active">
+                        <i class="menu-icon" [class]="child.icon"></i>
+                        <span class="menu-text">{{ child.label }}</span>
+                      </a>
+                    } @else {
+                      <span class="menu-link submenu-link disabled">
+                        <i class="menu-icon" [class]="child.icon"></i>
+                        <span class="menu-text">{{ child.label }}</span>
+                      </span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="layout-content">
+    <router-outlet />
+  </main>
+</div>
+
+<p-toast />
+<p-confirmdialog />
