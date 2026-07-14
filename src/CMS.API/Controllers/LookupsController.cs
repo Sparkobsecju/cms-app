@@ -25,4 +25,22 @@ public class LookupsController : ControllerBase
         var users = await _repository.GetAppUsersAsync(cancellationToken);
         return Ok(users);
     }
+
+    /// <summary>Publishing statuses (for Course/Promotion form selects).</summary>
+    [HttpGet("publish-statuses")]
+    [ProducesResponseType(typeof(IReadOnlyList<PublishStatusLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PublishStatusLookup>>> GetPublishStatuses(CancellationToken cancellationToken)
+    {
+        var statuses = await _repository.GetPublishStatusesAsync(cancellationToken);
+        return Ok(statuses);
+    }
+
+    /// <summary>Course groups (for the Course form select).</summary>
+    [HttpGet("course-groups")]
+    [ProducesResponseType(typeof(IReadOnlyList<CourseGroupLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CourseGroupLookup>>> GetCourseGroups(CancellationToken cancellationToken)
+    {
+        var groups = await _repository.GetCourseGroupsAsync(cancellationToken);
+        return Ok(groups);
+    }
 }

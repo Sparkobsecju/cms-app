@@ -1,0 +1,29 @@
+.row-actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.link {
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.filter-body {
+  padding-top: 0.5rem;
+}
+
+.filter-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+:host ::ng-deep .full-width {
+  width: 100%;
+}
