@@ -45,6 +45,17 @@
         <dt>備註</dt><dd class="pre">{{ c.note }}</dd>
         <dt>其他資訊</dt><dd class="pre">{{ c.otherInfo }}</dd>
       </dl>
+
+      <div class="qr-block">
+        <h3 class="qr-title">{{ c.courseId }}</h3>
+        @if (qrDataUrl(); as qr) {
+          <img class="qr-image" [src]="qr" [alt]="'QR Code：' + c.courseId" width="220" height="220" />
+          <button pButton type="button" label="下載 QR Code" icon="pi pi-download"
+                  class="p-button-outlined" (click)="downloadQr()"></button>
+        } @else {
+          <span class="text-muted">QR Code 產生中…</span>
+        }
+      </div>
     </div>
 
     <div class="card">

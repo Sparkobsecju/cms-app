@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
+import { QrService } from '@core/services/qr.service';
 import { Course } from '@core/models/course.model';
 
 /** Read-only detail page for a course (檢視課程). */
@@ -18,11 +19,36 @@ import { Course } from '@core/models/course.model';
 export class CourseDetail implements OnInit {
   private readonly service = inject(CourseService);
   private readonly lookups = inject(LookupService);
+  private readonly qr = inject(QrService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   protected readonly course = signal<Course | null>(null);
   protected readonly loading = signal(true);
+
+  /** Public page URL encoded in the QR code (uuu.com.tw). */
+  protected readonly qrUrl = computed(() => {
+    const c = this.course();
+    return c ? `https://www.uuu.com.tw/Course/Show/${c.pkid}/${c.courseId}` : null;
+  });
+
+  /** Rendered QR image as a PNG data URL; null until generated. */
+  protected readonly qrDataUrl = signal<string | null>(null);
+
+  constructor() {
+    // Regenerate the QR image whenever the encoded URL changes.
+    effect(() => {
+      const url = this.qrUrl();
+      if (!url) {
+        this.qrDataUrl.set(null);
+        return;
+      }
+      this.qr
+        .toDataUrl(url)
+        .then((data) => this.qrDataUrl.set(data))
+        .catch(() => this.qrDataUrl.set(null));
+    });
+  }
 
   private readonly certificationLabels = signal<Map<number, string>>(new Map());
   private readonly jobCategoryLabels = signal<Map<number, string>>(new Map());
@@ -67,5 +93,18 @@ export class CourseDetail implements OnInit {
     if (course) {
       this.router.navigate(['/courses', course.pkid, 'edit']);
     }
+  }
+
+  /** Download the generated QR image as `{CourseId}.png`. */
+  protected downloadQr(): void {
+    const data = this.qrDataUrl();
+    const c = this.course();
+    if (!data || !c) {
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = data;
+    link.download = `${c.courseId}.png`;
+    link.click();
   }
 }

@@ -22,6 +22,7 @@ one-time rationale + reference-feature decisions live in [setup-notes.md](setup-
 - `core/models`, `core/services` (per aggregate + `lookup.service.ts`); `features/{plural}/{table}-list|-detail|-form/`.
 - Service `get(id)`/`delete(id)` must `encodeURIComponent` for string PKs (numeric IDENTITY PKs need none). List: sortable `p-table` + `p-drawer` filter, session keys `{table}-list-filters|-sort|-page`. Filter drawer FK dropdowns use `p-select appendTo="body"`; date columns use `p-datepicker` range pairs (ISO↔Date via local parts). Form: Reactive Forms, `forkJoin` lookups, string PK disabled in edit, FK `p-select`, N-N `p-multiselect`.
 - Specs: `HttpTestingController` (services), spy-object stubs (components).
+- **Client-side generation via a third-party lib** (e.g. QR codes): wrap the lib in an injectable `core/services/{x}.service.ts` seam that returns a data URL — components stay testable with a plain spy, never touching the lib. Drive (re)generation with an `effect` on a `computed` source signal; **download** by clicking a transient `<a>` whose `href` is the data URL and `download` is the filename. Register CommonJS libs in `angular.json > allowedCommonJsDependencies` to keep the build warning-free. Reference: Course detail QR (`QrService` + `qrcode`).
 
 ## Reference features
 
@@ -30,7 +31,7 @@ Mirror the closest existing one:
 - **PublishStatus** (`features/publish-statuses`) — caller-supplied tinyint PK.
 - **CourseGroup** (`features/course-groups`) — IDENTITY PK + provides a lookup (single meaningful column).
 - **Partner** (`features/partners`) — IDENTITY PK + provides a lookup, but with several required string columns + a nullable one + `DisplayOrder` sort; the reference for a plain multi-field master table (no FKs, no N-N).
-- **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example.
+- **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example. The **detail** page also renders a **QR code** inside the 課程資料 card: encodes `https://www.uuu.com.tw/Course/Show/{pkid}/{CourseId}`, titled by `CourseId`, downloadable as `{CourseId}.png` — the reference for the client-side-generation pattern above (`QrService`).
 - **AppUser** (`features/app-users`) — string PK + N-N + a server-managed secret field (`PasswordHash`, never in any DTO) + an action endpoint (`POST /{id}/reset-password`). Spec: `spec/auth/AppUser.md`.
 - **FeaturedPromoItem** (`features/featured-promo-items`) — IDENTITY PK + two FK-JOIN displays (`PromoCode` from Promotion2, `TrainingCenterName`) + a **bespoke non-tabular list** instead of the standard `p-table`: a training-center tab bar, a Mon–Sun week navigator, and a day×slot grid with **inline** add/edit (no separate detail/form routes), Copy/Paste, and a slot-move **action endpoint** (`POST /{id}/move/{up|down}` swaps neighbouring slots in one transaction, parking at slot 0 to dodge the `UNIQUE(ScheduleOn, TrainingCenter_pkid, Slot)` index). The form resolves an entered PromoCode → `Promotion_pkid` client-side via `GET /api/lookups/promotions`. The reference for a **custom-UI feature** (inline editing, action endpoint, lookup-driven FK). Spec: `spec/custom/FeaturedPromoItem/`.
 
