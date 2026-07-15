@@ -32,3 +32,32 @@
 :host ::ng-deep .full-width {
   width: 100%;
 }
+
+/* Inline (in-place) cell editing */
+.editable {
+  cursor: pointer;
+}
+
+.editable:hover {
+  background: var(--p-content-hover-background, #f1f5f9);
+}
+
+.editable.editing {
+  background: var(--p-highlight-background, #eff6ff);
+}
+
+:host ::ng-deep .cell-input {
+  width: 100%;
+}
+
+:host ::ng-deep .cell-input .p-inputnumber-input {
+  width: 100%;
+}
+
+.edit-error {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--p-red-500, #ef4444);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}

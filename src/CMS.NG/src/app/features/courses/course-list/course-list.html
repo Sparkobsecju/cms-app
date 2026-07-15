@@ -17,6 +17,41 @@
     </div>
   </div>
 
+  <!-- Shared inline-edit widget: one instance renders the active cell (only one edits at a time). -->
+  <ng-template #cellEditor let-field>
+    @switch (editorType(field)) {
+      @case ('text') {
+        <input pInputText [pAutoFocus]="true" class="cell-input" [(ngModel)]="editValue"
+               (blur)="commitEdit()" (keydown.enter)="commitEdit()" (keydown.escape)="cancelEdit()" />
+      }
+      @case ('number') {
+        <p-inputNumber [autofocus]="true" styleClass="cell-input" [(ngModel)]="editValue"
+                       [useGrouping]="false" [min]="0" [minFractionDigits]="0"
+                       [maxFractionDigits]="field === 'learningCredit' ? 1 : 0"
+                       (onBlur)="commitEdit()" (keydown.enter)="commitEdit()"
+                       (keydown.escape)="cancelEdit()" />
+      }
+      @case ('date') {
+        <!-- Commit on select (model is updated before onSelect); onBlur only closes on click-away. -->
+        <p-datepicker [autofocus]="true" styleClass="cell-input" [(ngModel)]="editValue"
+                      dateFormat="yy-mm-dd" appendTo="body"
+                      (onSelect)="commitEdit()" (onBlur)="closeOnBlur()" />
+      }
+      @case ('select') {
+        <!-- Commit on change (picking an option); onBlur only closes on click-away. -->
+        <p-select [autofocus]="true" styleClass="cell-input" [(ngModel)]="editValue"
+                  [options]="publishStatusOptions()" optionLabel="label" optionValue="value"
+                  appendTo="body" (onChange)="commitEdit()" (onBlur)="closeOnBlur()" />
+      }
+      @case ('checkbox') {
+        <p-checkbox [autofocus]="true" [(ngModel)]="editValue" [binary]="true" (onBlur)="commitEdit()" />
+      }
+    }
+    @if (editError()) {
+      <small class="edit-error">{{ editError() }}</small>
+    }
+  </ng-template>
+
   <div class="card">
     <p-table
       [value]="courses()"
@@ -56,24 +91,113 @@
 
       <ng-template pTemplate="body" let-course>
         <tr>
+          <!-- Read-only: primary key -->
           <td>{{ course.pkid }}</td>
-          <td>{{ course.displayOrder }}</td>
-          <td>{{ course.courseId }}</td>
-          <td>{{ course.prodCourseId }}</td>
-          <td>
-            <a class="link" (click)="view(course)">{{ course.title }}</a>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'displayOrder')"
+              (dblclick)="startEdit(course, 'displayOrder')">
+            @if (isEditing(course.pkid, 'displayOrder')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'displayOrder' }" />
+            } @else {
+              {{ course.displayOrder }}
+            }
           </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'courseId')"
+              (dblclick)="startEdit(course, 'courseId')">
+            @if (isEditing(course.pkid, 'courseId')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'courseId' }" />
+            } @else {
+              {{ course.courseId }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'prodCourseId')"
+              (dblclick)="startEdit(course, 'prodCourseId')">
+            @if (isEditing(course.pkid, 'prodCourseId')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'prodCourseId' }" />
+            } @else {
+              {{ course.prodCourseId }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'title')"
+              (dblclick)="startEdit(course, 'title')">
+            @if (isEditing(course.pkid, 'title')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'title' }" />
+            } @else {
+              {{ course.title }}
+            }
+          </td>
+
+          <!-- Read-only: FK lookup (原廠) -->
           <td>{{ course.partnerName }}</td>
+          <!-- Read-only: FK lookup (課程群組) -->
           <td>{{ course.courseGroupDescription }}</td>
-          <td>{{ course.publishStatusDescription }}</td>
-          <td>{{ course.scheduleOn }}</td>
-          <td>{{ course.scheduleOff }}</td>
-          <td>{{ course.hour }}</td>
-          <td>{{ course.listPrice }}</td>
-          <td>{{ course.learningCredit }}</td>
-          <td>
-            <p-tag [value]="course.canRepeat ? '是' : '否'" [severity]="course.canRepeat ? 'success' : 'secondary'" />
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'publishStatusPkid')"
+              (dblclick)="startEdit(course, 'publishStatusPkid')">
+            @if (isEditing(course.pkid, 'publishStatusPkid')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'publishStatusPkid' }" />
+            } @else {
+              {{ course.publishStatusDescription }}
+            }
           </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'scheduleOn')"
+              (dblclick)="startEdit(course, 'scheduleOn')">
+            @if (isEditing(course.pkid, 'scheduleOn')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'scheduleOn' }" />
+            } @else {
+              {{ course.scheduleOn }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'scheduleOff')"
+              (dblclick)="startEdit(course, 'scheduleOff')">
+            @if (isEditing(course.pkid, 'scheduleOff')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'scheduleOff' }" />
+            } @else {
+              {{ course.scheduleOff }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'hour')"
+              (dblclick)="startEdit(course, 'hour')">
+            @if (isEditing(course.pkid, 'hour')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'hour' }" />
+            } @else {
+              {{ course.hour }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'listPrice')"
+              (dblclick)="startEdit(course, 'listPrice')">
+            @if (isEditing(course.pkid, 'listPrice')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'listPrice' }" />
+            } @else {
+              {{ course.listPrice }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'learningCredit')"
+              (dblclick)="startEdit(course, 'learningCredit')">
+            @if (isEditing(course.pkid, 'learningCredit')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'learningCredit' }" />
+            } @else {
+              {{ course.learningCredit }}
+            }
+          </td>
+
+          <td class="editable" [class.editing]="isEditing(course.pkid, 'canRepeat')"
+              (dblclick)="startEdit(course, 'canRepeat')">
+            @if (isEditing(course.pkid, 'canRepeat')) {
+              <ng-container *ngTemplateOutlet="cellEditor; context: { $implicit: 'canRepeat' }" />
+            } @else {
+              <p-tag [value]="course.canRepeat ? '是' : '否'" [severity]="course.canRepeat ? 'success' : 'secondary'" />
+            }
+          </td>
+
           <td>
             <div class="row-actions">
               <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-rounded"
