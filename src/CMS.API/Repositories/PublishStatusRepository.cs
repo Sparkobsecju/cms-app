@@ -1,5 +1,7 @@
+using System.Data;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Services;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -7,7 +9,10 @@ namespace CMS.API.Repositories;
 /// <summary>Dapper-based data access for <see cref="PublishStatus"/>.</summary>
 public sealed class PublishStatusRepository : IPublishStatusRepository
 {
+    private const string TableName = "PublishStatus";
+
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IRowAuditWriter _auditWriter;
 
     // Shared SELECT projection.
     private const string SelectColumns = @"
@@ -17,9 +22,10 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
         s.IsPublished AS IsPublished,
         s.IsDiscontinued AS IsDiscontinued";
 
-    public PublishStatusRepository(IDbConnectionFactory connectionFactory)
+    public PublishStatusRepository(IDbConnectionFactory connectionFactory, IRowAuditWriter auditWriter)
     {
         _connectionFactory = connectionFactory;
+        _auditWriter = auditWriter;
     }
 
     public async Task<IReadOnlyList<PublishStatus>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -55,9 +61,16 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
     public async Task<PublishStatus?> GetByIdAsync(byte pkid, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        return await GetByIdAsync(connection, transaction: null, pkid, cancellationToken);
+    }
+
+    // Transaction-aware read used by the mutating methods so the "before"/"after" audit snapshots
+    // see uncommitted state on the same connection.
+    private static async Task<PublishStatus?> GetByIdAsync(IDbConnection connection, IDbTransaction? transaction, byte pkid, CancellationToken cancellationToken)
+    {
         var sql = $"SELECT {SelectColumns} FROM PublishStatus s WHERE s.pkid = @Pkid;";
         return await connection.QuerySingleOrDefaultAsync<PublishStatus>(
-            new CommandDefinition(sql, new { Pkid = pkid }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { Pkid = pkid }, transaction, cancellationToken: cancellationToken));
     }
 
     public async Task<bool> ExistsAsync(byte pkid, CancellationToken cancellationToken = default)
@@ -73,6 +86,8 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
     public async Task<byte> CreateAsync(PublishStatusRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        using var transaction = connection.BeginTransaction();
+
         await connection.ExecuteAsync(new CommandDefinition(@"
             INSERT INTO PublishStatus (pkid, Description, IsDraft, IsPublished, IsDiscontinued)
             VALUES (@Pkid, @Description, @IsDraft, @IsPublished, @IsDiscontinued);",
@@ -83,15 +98,28 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
                 request.IsDraft,
                 request.IsPublished,
                 request.IsDiscontinued,
-            }, cancellationToken: cancellationToken));
+            }, transaction, cancellationToken: cancellationToken));
 
+        var created = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        await _auditWriter.LogInsertAsync(connection, transaction, TableName, created!, cancellationToken);
+
+        transaction.Commit();
         return request.Pkid;
     }
 
     public async Task<bool> UpdateAsync(PublishStatusRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var affected = await connection.ExecuteAsync(new CommandDefinition(@"
+        using var transaction = connection.BeginTransaction();
+
+        var before = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        if (before is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(@"
             UPDATE PublishStatus
             SET Description = @Description,
                 IsDraft = @IsDraft,
@@ -105,17 +133,34 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
                 request.IsDraft,
                 request.IsPublished,
                 request.IsDiscontinued,
-            }, cancellationToken: cancellationToken));
+            }, transaction, cancellationToken: cancellationToken));
 
-        return affected > 0;
+        var after = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        await _auditWriter.LogUpdateAsync(connection, transaction, TableName, before, after!, cancellationToken);
+
+        transaction.Commit();
+        return true;
     }
 
     public async Task<bool> DeleteAsync(byte pkid, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var affected = await connection.ExecuteAsync(new CommandDefinition(
+        using var transaction = connection.BeginTransaction();
+
+        var row = await GetByIdAsync(connection, transaction, pkid, cancellationToken);
+        if (row is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM PublishStatus WHERE pkid = @Pkid",
-            new { Pkid = pkid }, cancellationToken: cancellationToken));
-        return affected > 0;
+            new { Pkid = pkid }, transaction, cancellationToken: cancellationToken));
+
+        await _auditWriter.LogDeleteAsync(connection, transaction, TableName, row, cancellationToken);
+
+        transaction.Commit();
+        return true;
     }
 }

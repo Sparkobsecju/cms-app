@@ -1,7 +1,7 @@
 # Setup Notes & Design Decisions
 
-One-time context and rationale for the CMS full-stack app. Durable working conventions
-live in the root `CLAUDE.md`; this file holds the background it links to.
+One-time context and rationale for the CMS full-stack app. Recurring build rules live
+in [conventions.md](conventions.md); this file holds the background they rest on.
 
 ## Repository layout
 
@@ -37,6 +37,24 @@ npx ng build                                # production build
 
 Run the API before `ng serve`; the dev environment points the SPA at `http://localhost:5000/api`.
 Backend tests need no database. End-to-end use needs the `CMS` DB on `.\SQLEXPRESS`.
+
+## Database data & date refresh
+
+`database/*.sql` are **schema only** (CREATE TABLE + FK constraints); they carry **no seed
+`INSERT`s**. The `CMS` database is populated separately (restore/import) — e.g. it ships
+~31k `FeaturedPromoItem` rows and ~1.1k `Promotion2` rows spanning 2019–2026.
+
+Consequence: a **date-windowed list can look empty even though rows exist**, because the data
+predates the window. The FeaturedPromoItem list defaults to the current Mon–Sun week, so if
+the newest `ScheduleOn` is in the past, the default view shows nothing.
+
+Fix — `database/refresh-promo-dates.sql` shifts every `FeaturedPromoItem.ScheduleOn` so the
+newest row lands ~30 days from today, preserving relative spacing. **Idempotent** (re-running
+re-anchors the newest to today+30 with no drift):
+
+```bash
+sqlcmd -S ".\SQLEXPRESS" -d CMS -E -C -i database/refresh-promo-dates.sql
+```
 
 ## Backend detail
 

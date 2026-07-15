@@ -7,11 +7,12 @@ import { forkJoin } from 'rxjs';
 import { AppRoleService } from '@core/services/app-role.service';
 import { LookupService } from '@core/services/lookup.service';
 import { AppRole, AppUserLookup } from '@core/models/app-role.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a role (檢視角色). */
 @Component({
   selector: 'app-app-role-detail',
-  imports: [CommonModule, ButtonModule, ChipModule],
+  imports: [CommonModule, ButtonModule, ChipModule, RowAuditBadge],
   templateUrl: './app-role-detail.html',
   styleUrl: './app-role-detail.scss',
 })

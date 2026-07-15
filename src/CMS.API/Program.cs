@@ -1,5 +1,7 @@
 using CMS.API.Data;
+using CMS.API.Middleware;
 using CMS.API.Repositories;
+using CMS.API.Services;
 using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,9 @@ SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 builder.Services.AddControllers();
+
+// Exposes the current request (and its JWT claims) to cross-cutting services like RowAuditWriter.
+builder.Services.AddHttpContextAccessor();
 
 // Swagger / OpenAPI (Swashbuckle).
 builder.Services.AddEndpointsApiExplorer();
@@ -38,11 +43,22 @@ builder.Services.AddCors(options =>
 // Data access.
 builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddScoped<IAppRoleRepository, AppRoleRepository>();
+builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 builder.Services.AddScoped<IPublishStatusRepository, PublishStatusRepository>();
 builder.Services.AddScoped<ICourseGroupRepository, CourseGroupRepository>();
+builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
+builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
+builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
+
+// Cross-cutting audit writer; repositories will call it after Insert/Update/Delete.
+builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
 
 var app = builder.Build();
+
+// First in the pipeline: catch any unhandled exception and return a safe 500.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Swagger UI at /swagger.
 app.UseSwagger();

@@ -5,11 +5,12 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { PublishStatusService } from '@core/services/publish-status.service';
 import { PublishStatus } from '@core/models/publish-status.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a publishing status (檢視發布狀態). */
 @Component({
   selector: 'app-publish-status-detail',
-  imports: [CommonModule, ButtonModule, TagModule],
+  imports: [CommonModule, ButtonModule, TagModule, RowAuditBadge],
   templateUrl: './publish-status-detail.html',
   styleUrl: './publish-status-detail.scss',
 })

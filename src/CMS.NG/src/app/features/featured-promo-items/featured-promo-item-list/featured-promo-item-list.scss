@@ -1,0 +1,110 @@
+.promo-page {
+  padding: 1rem 1.25rem;
+}
+
+/* ----- center tabs ----- */
+.center-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--p-content-border-color, #dcdcdc);
+  margin-bottom: 0.75rem;
+}
+
+.center-tab {
+  border: 1px solid var(--p-content-border-color, #dcdcdc);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 0.4rem 1rem;
+  background: var(--p-surface-100, #f4f4f5);
+  color: var(--p-text-muted-color, #666);
+  cursor: pointer;
+  font-size: 0.9rem;
+
+  &.active {
+    background: var(--p-content-background, #fff);
+    color: var(--p-primary-color, #2563eb);
+    font-weight: 600;
+    border-color: var(--p-primary-color, #2563eb);
+  }
+}
+
+/* ----- week navigator ----- */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+
+  .week-range {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* ----- grid ----- */
+.day-block {
+  margin-bottom: 0.75rem;
+}
+
+.day-header {
+  background: var(--p-surface-200, #e6e6e8);
+  padding: 0.35rem 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  margin-bottom: 0.35rem;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 1.5rem auto minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, 1.4fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.25rem;
+
+  &.editing {
+    grid-template-columns: 1.5rem 1fr;
+    align-items: start;
+  }
+}
+
+.slot-no {
+  color: var(--p-text-muted-color, #666);
+  text-align: center;
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.cell {
+  width: 100%;
+
+  &.empty {
+    background: var(--p-surface-50, #fafafa);
+  }
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--p-primary-color, #2563eb);
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: var(--p-text-muted-color, #bbb);
+    cursor: default;
+  }
+
+  &.danger {
+    color: var(--p-red-500, #dc2626);
+  }
+}

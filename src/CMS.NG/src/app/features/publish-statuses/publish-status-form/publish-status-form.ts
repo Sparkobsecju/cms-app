@@ -9,13 +9,14 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService } from 'primeng/api';
 import { PublishStatusService } from '@core/services/publish-status.service';
 import { PublishStatusRequest } from '@core/models/publish-status.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Add / edit form for a publishing status (新增／編輯發布狀態). */
 @Component({
   selector: 'app-publish-status-form',
   imports: [
     CommonModule, ReactiveFormsModule, ButtonModule,
-    InputTextModule, InputNumberModule, CheckboxModule,
+    InputTextModule, InputNumberModule, CheckboxModule, RowAuditBadge,
   ],
   templateUrl: './publish-status-form.html',
   styleUrl: './publish-status-form.scss',
@@ -30,6 +31,8 @@ export class PublishStatusForm implements OnInit {
   protected readonly isEdit = signal(false);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  // Numeric pkid of the loaded record, for the Row Audit badge (edit mode only).
+  protected readonly recordPkid = signal<number | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     pkid: [null as number | null, Validators.required],
@@ -46,6 +49,7 @@ export class PublishStatusForm implements OnInit {
     if (idParam) {
       this.service.get(Number(idParam)).subscribe({
         next: (status) => {
+          this.recordPkid.set(status.pkid);
           this.form.patchValue({
             pkid: status.pkid,
             description: status.description,

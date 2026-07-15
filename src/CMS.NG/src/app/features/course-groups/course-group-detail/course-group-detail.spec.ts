@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { RowAuditService } from '@core/services/row-audit.service';
 import { of } from 'rxjs';
 import { CourseGroupDetail } from './course-group-detail';
 import { CourseGroupService } from '@core/services/course-group.service';
@@ -22,6 +23,7 @@ describe('CourseGroupDetail', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        { provide: RowAuditService, useValue: { history: () => of([]) } },
         { provide: CourseGroupService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } } },
       ],

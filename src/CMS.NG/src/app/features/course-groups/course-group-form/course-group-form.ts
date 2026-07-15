@@ -7,11 +7,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { CourseGroupService } from '@core/services/course-group.service';
 import { CourseGroupRequest } from '@core/models/course-group.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Add / edit form for a course group (新增／編輯課程群組). */
 @Component({
   selector: 'app-course-group-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, RowAuditBadge],
   templateUrl: './course-group-form.html',
   styleUrl: './course-group-form.scss',
 })

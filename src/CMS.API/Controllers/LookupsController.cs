@@ -26,6 +26,15 @@ public class LookupsController : ControllerBase
         return Ok(users);
     }
 
+    /// <summary>Application roles (for the user roles multi-select).</summary>
+    [HttpGet("app-roles")]
+    [ProducesResponseType(typeof(IReadOnlyList<AppRoleLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AppRoleLookup>>> GetAppRoles(CancellationToken cancellationToken)
+    {
+        var roles = await _repository.GetAppRolesAsync(cancellationToken);
+        return Ok(roles);
+    }
+
     /// <summary>Publishing statuses (for Course/Promotion form selects).</summary>
     [HttpGet("publish-statuses")]
     [ProducesResponseType(typeof(IReadOnlyList<PublishStatusLookup>), StatusCodes.Status200OK)]
@@ -42,5 +51,50 @@ public class LookupsController : ControllerBase
     {
         var groups = await _repository.GetCourseGroupsAsync(cancellationToken);
         return Ok(groups);
+    }
+
+    /// <summary>Partners (for the Course form select).</summary>
+    [HttpGet("partners")]
+    [ProducesResponseType(typeof(IReadOnlyList<PartnerLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PartnerLookup>>> GetPartners(CancellationToken cancellationToken)
+    {
+        var partners = await _repository.GetPartnersAsync(cancellationToken);
+        return Ok(partners);
+    }
+
+    /// <summary>Certifications (for the Course form multi-select).</summary>
+    [HttpGet("certifications")]
+    [ProducesResponseType(typeof(IReadOnlyList<CertificationLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CertificationLookup>>> GetCertifications(CancellationToken cancellationToken)
+    {
+        var certifications = await _repository.GetCertificationsAsync(cancellationToken);
+        return Ok(certifications);
+    }
+
+    /// <summary>Job categories (for the Course form multi-select).</summary>
+    [HttpGet("job-categories")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobCategoryLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobCategoryLookup>>> GetJobCategories(CancellationToken cancellationToken)
+    {
+        var jobCategories = await _repository.GetJobCategoriesAsync(cancellationToken);
+        return Ok(jobCategories);
+    }
+
+    /// <summary>Training centers (for the FeaturedPromoItem tabs / filter).</summary>
+    [HttpGet("training-centers")]
+    [ProducesResponseType(typeof(IReadOnlyList<TrainingCenterLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TrainingCenterLookup>>> GetTrainingCenters(CancellationToken cancellationToken)
+    {
+        var centers = await _repository.GetTrainingCentersAsync(cancellationToken);
+        return Ok(centers);
+    }
+
+    /// <summary>Promotions (for the FeaturedPromoItem PromoCode lookup).</summary>
+    [HttpGet("promotions")]
+    [ProducesResponseType(typeof(IReadOnlyList<PromotionLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PromotionLookup>>> GetPromotions(CancellationToken cancellationToken)
+    {
+        var promotions = await _repository.GetPromotionsAsync(cancellationToken);
+        return Ok(promotions);
     }
 }

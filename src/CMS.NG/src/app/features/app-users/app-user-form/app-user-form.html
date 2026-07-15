@@ -1,0 +1,68 @@
+<form class="page" [formGroup]="form" (ngSubmit)="save()">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>{{ isEdit() ? '編輯使用者' : '新增使用者' }}</h1>
+    </div>
+    <div class="page-actions">
+      @if (isEdit() && recordPkid(); as id) {
+        <app-row-audit-badge tableName="AppUser" [pkid]="id" />
+      }
+      <button pButton type="button" label="取消" icon="pi pi-times"
+              class="p-button-outlined p-button-secondary" (click)="cancel()"></button>
+      <button pButton type="submit" label="儲存" icon="pi pi-check" severity="success"
+              [disabled]="saving()"></button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card text-muted">載入中…</div>
+  } @else {
+    <div class="card">
+      <h2 class="card-title">使用者資料</h2>
+
+      <div class="field">
+        <label for="userId">帳號 <span class="required">*</span></label>
+        <input id="userId" pInputText class="full-width" formControlName="userId"
+               placeholder="請輸入帳號" />
+        @if (isInvalid('userId')) {
+          <div class="field-error">請輸入帳號</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="userName">使用者名稱 <span class="required">*</span></label>
+        <input id="userName" pInputText class="full-width" formControlName="userName" />
+        @if (isInvalid('userName')) {
+          <div class="field-error">請輸入使用者名稱</div>
+        }
+      </div>
+
+      <div class="field">
+        <label class="checkbox-field">
+          <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive" />
+          <span>啟用此帳號</span>
+        </label>
+      </div>
+
+      @if (!isEdit()) {
+        <p class="hint text-muted">新帳號的密碼將自動設為系統預設密碼。</p>
+      }
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">角色</h2>
+      <p-multiSelect
+        [options]="roleOptions()"
+        formControlName="roleIds"
+        optionLabel="label"
+        optionValue="roleId"
+        [filter]="true"
+        filterBy="label"
+        [maxSelectedLabels]="9999"
+        placeholder="選擇角色（可複選）"
+        appendTo="body"
+        styleClass="full-width"
+      />
+    </div>
+  }
+</form>
