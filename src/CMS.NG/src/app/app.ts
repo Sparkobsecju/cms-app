@@ -36,6 +36,7 @@ export class App {
       children: [
         { label: '課程 Course', icon: 'pi pi-book', route: '/courses' },
         { label: '課程群組 CourseGroup', icon: 'pi pi-folder', route: '/course-groups' },
+        { label: '原廠 Partner', icon: 'pi pi-building', route: '/partners' },
       ],
     },
     { label: '說明會 Seminar', icon: 'pi pi-comments', children: [] },

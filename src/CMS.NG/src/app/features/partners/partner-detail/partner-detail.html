@@ -1,0 +1,43 @@
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>檢視原廠</h1>
+      @if (partner(); as p) {
+        <span class="subtitle">主代碼 {{ p.pkid }}</span>
+      }
+    </div>
+    <div class="page-actions">
+      <button pButton type="button" label="返回" icon="pi pi-arrow-left"
+              class="p-button-outlined p-button-secondary" (click)="back()"></button>
+      <button pButton type="button" label="查看課程" icon="pi pi-book"
+              class="p-button-outlined" (click)="viewCourses()"></button>
+      <button pButton type="button" label="編輯" icon="pi pi-pencil" (click)="edit()"></button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card text-muted">載入中…</div>
+  } @else if (partner(); as p) {
+    <div class="card">
+      <h2 class="card-title">原廠資料</h2>
+      <dl class="detail-grid">
+        <dt>主代碼</dt>
+        <dd>{{ p.pkid }}</dd>
+        <dt>原廠名稱</dt>
+        <dd>{{ p.name }}</dd>
+        <dt>應用金鑰</dt>
+        <dd>{{ p.appKey }}</dd>
+        <dt>選單顯示名稱</dt>
+        <dd>{{ p.nameOnPartnerMenu }}</dd>
+        <dt>課程頁顯示名稱</dt>
+        <dd>{{ p.nameOnCourseDetailPage }}</dd>
+        <dt>顯示順序</dt>
+        <dd>{{ p.displayOrder }}</dd>
+        <dt>圖片檔名</dt>
+        <dd>{{ p.imageFilename || '—' }}</dd>
+      </dl>
+    </div>
+  } @else {
+    <div class="card text-muted">查無此原廠</div>
+  }
+</div>

@@ -83,6 +83,26 @@ export const routes: Routes = [
       import('@features/course-groups/course-group-detail/course-group-detail').then((m) => m.CourseGroupDetail),
   },
   {
+    path: 'partners',
+    loadComponent: () =>
+      import('@features/partners/partner-list/partner-list').then((m) => m.PartnerList),
+  },
+  {
+    path: 'partners/new',
+    loadComponent: () =>
+      import('@features/partners/partner-form/partner-form').then((m) => m.PartnerForm),
+  },
+  {
+    path: 'partners/:id/edit',
+    loadComponent: () =>
+      import('@features/partners/partner-form/partner-form').then((m) => m.PartnerForm),
+  },
+  {
+    path: 'partners/:id',
+    loadComponent: () =>
+      import('@features/partners/partner-detail/partner-detail').then((m) => m.PartnerDetail),
+  },
+  {
     path: 'courses',
     loadComponent: () =>
       import('@features/courses/course-list/course-list').then((m) => m.CourseList),

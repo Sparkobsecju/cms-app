@@ -28,7 +28,8 @@ one-time rationale + reference-feature decisions live in [setup-notes.md](setup-
 Mirror the closest existing one:
 - **AppRole** (`features/app-roles`) — string PK + N-N.
 - **PublishStatus** (`features/publish-statuses`) — caller-supplied tinyint PK.
-- **CourseGroup** (`features/course-groups`) — IDENTITY PK + provides a lookup.
+- **CourseGroup** (`features/course-groups`) — IDENTITY PK + provides a lookup (single meaningful column).
+- **Partner** (`features/partners`) — IDENTITY PK + provides a lookup, but with several required string columns + a nullable one + `DisplayOrder` sort; the reference for a plain multi-field master table (no FKs, no N-N).
 - **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example.
 - **AppUser** (`features/app-users`) — string PK + N-N + a server-managed secret field (`PasswordHash`, never in any DTO) + an action endpoint (`POST /{id}/reset-password`). Spec: `spec/auth/AppUser.md`.
 

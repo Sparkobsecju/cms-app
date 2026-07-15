@@ -1,0 +1,79 @@
+<form class="page" [formGroup]="form" (ngSubmit)="save()">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>{{ isEdit() ? '編輯原廠' : '新增原廠' }}</h1>
+    </div>
+    <div class="page-actions">
+      <button pButton type="button" label="取消" icon="pi pi-times"
+              class="p-button-outlined p-button-secondary" (click)="cancel()"></button>
+      <button pButton type="submit" label="儲存" icon="pi pi-check" severity="success"
+              [disabled]="saving()"></button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card text-muted">載入中…</div>
+  } @else {
+    <div class="card">
+      <h2 class="card-title">原廠資料</h2>
+
+      @if (isEdit()) {
+        <div class="field">
+          <label for="pkid">主代碼</label>
+          <input id="pkid" pInputText class="full-width" [value]="pkid()" disabled />
+        </div>
+      }
+
+      <div class="field">
+        <label for="name">原廠名稱 <span class="required">*</span></label>
+        <input id="name" pInputText class="full-width" formControlName="name"
+               maxlength="50" placeholder="請輸入原廠名稱" />
+        @if (isInvalid('name')) {
+          <div class="field-error">請輸入原廠名稱</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="appKey">應用金鑰 <span class="required">*</span></label>
+        <input id="appKey" pInputText class="full-width" formControlName="appKey"
+               maxlength="10" placeholder="請輸入應用金鑰" />
+        @if (isInvalid('appKey')) {
+          <div class="field-error">請輸入應用金鑰</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="nameOnPartnerMenu">選單顯示名稱 <span class="required">*</span></label>
+        <input id="nameOnPartnerMenu" pInputText class="full-width" formControlName="nameOnPartnerMenu"
+               maxlength="200" placeholder="請輸入選單顯示名稱" />
+        @if (isInvalid('nameOnPartnerMenu')) {
+          <div class="field-error">請輸入選單顯示名稱</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="nameOnCourseDetailPage">課程頁顯示名稱 <span class="required">*</span></label>
+        <input id="nameOnCourseDetailPage" pInputText class="full-width" formControlName="nameOnCourseDetailPage"
+               maxlength="50" placeholder="請輸入課程頁顯示名稱" />
+        @if (isInvalid('nameOnCourseDetailPage')) {
+          <div class="field-error">請輸入課程頁顯示名稱</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="displayOrder">顯示順序 <span class="required">*</span></label>
+        <input id="displayOrder" type="number" pInputText class="full-width" formControlName="displayOrder"
+               placeholder="請輸入顯示順序" />
+        @if (isInvalid('displayOrder')) {
+          <div class="field-error">請輸入顯示順序</div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="imageFilename">圖片檔名</label>
+        <input id="imageFilename" pInputText class="full-width" formControlName="imageFilename"
+               maxlength="50" placeholder="選填" />
+      </div>
+    </div>
+  }
+</form>
