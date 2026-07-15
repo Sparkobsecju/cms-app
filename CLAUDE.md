@@ -18,7 +18,19 @@ Full-stack CMS, code-generated from `database/*.sql`. Stack: `CMS.API` (.NET 9, 
   `401`) and issues a 24h JWT signed with `SysConfig['appConfig'].symmetricSecurityKey` (read at
   runtime), carrying `UserId`/`UserName` + one `ClaimTypes.Role` per `AppUserRole`. Stateless
   `AuthController`/`AuthRepository`/`JwtTokenService`; no writes, not row-audited; `PasswordHash`
-  never leaves the repo. Token *validation* (`AddJwtBearer`) + real frontend login are not wired yet.
+  never leaves the repo. **End-to-end auth is wired**: backend `AddJwtBearer` validates against the
+  same key (via `ISigningKeyProvider`) with a global fallback policy requiring auth on every
+  controller except `[AllowAnonymous]` `AuthController`; frontend has a real login page, a Bearer
+  `authInterceptor`, an `authGuard` on all routes but `/login`, session-storage profile in
+  `AuthService`, logout in the shell, and the 系統管理 Admin menu gated on the `Admin` role.
+  Browser-smoke-tested on :4200 against the live API: guard redirects (`/` and protected routes →
+  `/login`), invalid creds → generic banner with no session stored, Admin group hidden when signed
+  out, and the cross-origin `POST /api/Auth/login` 401 reaches the browser (CORS intact). The
+  authenticated success path (valid login → session/username/logout, Admin visible) was not
+  smoke-tested (needs a real active `AppUser` credential; don't read it from the DB).
+  **Known issue**: `/login` renders *inside* the app shell (root `App` always paints the sidebar +
+  Logout around `<router-outlet>`), so a signed-out visitor sees app nav and a Logout button on the
+  login page. Fix by moving the sidebar into a layout route that wraps only the guarded routes.
 - **Setup, layout, full command reference, DB data & date refresh, design rationale** (one-time
   background) → [docs/setup-notes.md](docs/setup-notes.md). `database/*.sql` is schema only — an
   empty date-windowed list usually means the data predates the window (→ *Database data*).

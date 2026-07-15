@@ -1,11 +1,15 @@
 using CMS.API.Models;
 using CMS.API.Repositories;
 using CMS.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
 
 /// <summary>Login endpoint (登入). Issues a JWT access token for valid, active users.</summary>
+// Anonymous by design: this is the one controller reachable without a bearer token, so users can
+// obtain one. Every other controller is protected by the global fallback authorization policy.
+[AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]

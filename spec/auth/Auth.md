@@ -202,12 +202,22 @@ Run: `dotnet test src/CMS.API.Tests/CMS.API.Tests.csproj` (no DB required).
 
 ---
 
-## Not Yet Built (future scope)
+## Authorization (end-to-end, built)
 
-- **Token validation** — `AddAuthentication().AddJwtBearer(...)` reading the same
-  `SysConfig['appConfig'].symmetricSecurityKey`, so `[Authorize]` / `[Authorize(Roles=…)]` can
-  protect the other controllers and `RowAuditWriter` can read the `UserName` claim from real
-  requests. (Login only *issues* tokens today; nothing *consumes* them yet.)
-- **Frontend** — `AuthService` currently holds a token in `localStorage` with a placeholder
-  `/login` page (see `docs/conventions.md` → Global HTTP error handling); wiring the real login
-  form to `POST /api/Auth/login` is not done here.
+- **Token validation** — `AddAuthentication().AddJwtBearer()` configured via
+  `Security/ConfigureJwtBearerOptions` (an `IConfigureNamedOptions<JwtBearerOptions>`). The
+  validation key is resolved at runtime from `ISigningKeyProvider`/`SigningKeyProvider`, which reads
+  the **same** `SysConfig['appConfig'].symmetricSecurityKey` (cached after first read). Params:
+  `ValidateIssuer/Audience = false`, `ValidateLifetime = true`, `MapInboundClaims = false`,
+  `NameClaimType = "UserName"`, `RoleClaimType = ClaimTypes.Role`.
+- **Global policy** — `AddAuthorization` sets a **fallback policy** of `RequireAuthenticatedUser()`,
+  so every endpoint needs a valid bearer token except `AuthController`, which carries
+  `[AllowAnonymous]`. `app.UseAuthentication()` precedes `app.UseAuthorization()`. Tests:
+  `AuthorizationTests` (WebApplicationFactory) — protected endpoint 401 without / 401 invalid / 200
+  with a valid token; `/api/Auth/login` reachable anonymously.
+- **Frontend** — real `/login` page posts to `POST /api/Auth/login`; `AuthService` stores the
+  `{ userId, userName, accessToken }` profile in **session** storage and exposes roles decoded from
+  the token; `authInterceptor` attaches `Authorization: Bearer`; `authGuard` (on all routes but
+  `/login`) redirects to `/login` when signed out; a 401 clears the session and redirects (error
+  interceptor); the shell shows the signed-in name + logout and gates the 系統管理 Admin menu on the
+  `Admin` role. Specs cover each of these.

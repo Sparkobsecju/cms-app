@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
+import { AuthService } from '@core/services/auth.service';
 
 interface NavChild {
   label: string;
@@ -13,6 +14,8 @@ interface NavGroup {
   label: string;
   icon: string;
   expanded?: boolean;
+  /** When true, the group is only shown to users holding the Admin role. */
+  adminOnly?: boolean;
   children: NavChild[];
 }
 
@@ -24,7 +27,13 @@ interface NavGroup {
   styleUrl: './app.scss',
 })
 export class App {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
   protected readonly collapsed = signal(false);
+
+  /** The signed-in display name, shown in the sidebar footer. */
+  protected readonly userName = this.auth.userName;
 
   // Only 系統管理 Admin → 角色 AppRole is wired; other groups are visual placeholders.
   protected readonly navGroups = signal<NavGroup[]>([
@@ -55,6 +64,7 @@ export class App {
       label: '系統管理 Admin',
       icon: 'pi pi-shield',
       expanded: true,
+      adminOnly: true,
       children: [
         { label: '角色 AppRole', icon: 'pi pi-id-card', route: '/app-roles' },
         { label: '發布狀態 PublishStatus', icon: 'pi pi-flag', route: '/publish-statuses' },
@@ -63,6 +73,11 @@ export class App {
     },
   ]);
 
+  // Hide admin-only groups (系統管理 Admin) unless the signed-in user holds the Admin role.
+  protected readonly visibleGroups = computed(() =>
+    this.navGroups().filter((group) => !group.adminOnly || this.auth.hasRole('Admin')),
+  );
+
   protected toggleCollapsed(): void {
     this.collapsed.update((v) => !v);
   }
@@ -70,5 +85,11 @@ export class App {
   protected toggleGroup(group: NavGroup): void {
     group.expanded = !group.expanded;
     this.navGroups.update((groups) => [...groups]);
+  }
+
+  /** Clears the session and returns to the Login page. */
+  protected logout(): void {
+    this.auth.clearSession();
+    this.router.navigate(['/login']);
   }
 }
