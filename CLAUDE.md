@@ -10,7 +10,8 @@ Full-stack CMS, code-generated from `database/*.sql`. Stack: `CMS.API` (.NET 9, 
 - **Web browsing**: use the `/browse` skill for *all* web browsing — **never** `mcp__claude-in-chrome__*`.
 
 ## Reference docs — read before the matching task
-- **Add/change a feature** — backend + frontend rules, reference-feature catalog, build order:
+- **Add/change a feature** — backend + frontend rules (incl. the cross-cutting **RowAudit** every
+  repo write must emit via `IRowAuditWriter`), reference-feature catalog, build order:
   [docs/conventions.md](docs/conventions.md) (canonical patterns: `spec/code-gen.convention.md`).
 - **Setup, layout, full command reference, DB data & date refresh, design rationale** (one-time
   background): [docs/setup-notes.md](docs/setup-notes.md). Note: `database/*.sql` is schema only —

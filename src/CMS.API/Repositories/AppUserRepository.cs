@@ -1,8 +1,10 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Services;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -10,7 +12,10 @@ namespace CMS.API.Repositories;
 /// <summary>Dapper-based data access for <see cref="AppUser"/>.</summary>
 public sealed class AppUserRepository : IAppUserRepository
 {
+    private const string TableName = "AppUser";
+
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IRowAuditWriter _auditWriter;
 
     // Shared SELECT projection; RoleCount comes from the AppUserRole junction.
     // PasswordHash is deliberately never selected — it must not reach the client.
@@ -22,9 +27,10 @@ public sealed class AppUserRepository : IAppUserRepository
         u.PasswordUpdatedTime AS PasswordUpdatedTime,
         (SELECT COUNT(*) FROM AppUserRole ur WHERE ur.UserId = u.UserId) AS RoleCount";
 
-    public AppUserRepository(IDbConnectionFactory connectionFactory)
+    public AppUserRepository(IDbConnectionFactory connectionFactory, IRowAuditWriter auditWriter)
     {
         _connectionFactory = connectionFactory;
+        _auditWriter = auditWriter;
     }
 
     public async Task<IReadOnlyList<AppUser>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -58,11 +64,19 @@ public sealed class AppUserRepository : IAppUserRepository
     public async Task<AppUser?> GetByIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        return await GetByIdAsync(connection, transaction: null, userId, cancellationToken);
+    }
+
+    // Transaction-aware read used by the mutating methods so the "before"/"after" audit snapshots
+    // (including the assigned RoleIds) see uncommitted state on the same connection. PasswordHash
+    // is never selected, so it never reaches an audit row.
+    private static async Task<AppUser?> GetByIdAsync(IDbConnection connection, IDbTransaction? transaction, string userId, CancellationToken cancellationToken)
+    {
         var sql = $@"
             SELECT {SelectColumns} FROM AppUser u WHERE u.UserId = @UserId;
             SELECT RoleId FROM AppUserRole WHERE UserId = @UserId ORDER BY RoleId;";
         using var multi = await connection.QueryMultipleAsync(
-            new CommandDefinition(sql, new { UserId = userId }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { UserId = userId }, transaction, cancellationToken: cancellationToken));
 
         var user = await multi.ReadSingleOrDefaultAsync<AppUser>();
         if (user is null)
@@ -104,6 +118,9 @@ public sealed class AppUserRepository : IAppUserRepository
 
         await ReplaceRoleAssignmentsAsync(connection, transaction, request.UserId, request.RoleIds, cancellationToken);
 
+        var created = await GetByIdAsync(connection, transaction, request.UserId, cancellationToken);
+        await _auditWriter.LogInsertAsync(connection, transaction, TableName, created!, cancellationToken);
+
         transaction.Commit();
         return request.UserId;
     }
@@ -113,8 +130,15 @@ public sealed class AppUserRepository : IAppUserRepository
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
 
+        var before = await GetByIdAsync(connection, transaction, request.UserId, cancellationToken);
+        if (before is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
         // PasswordHash / PasswordUpdatedTime are intentionally untouched here.
-        var affected = await connection.ExecuteAsync(new CommandDefinition(@"
+        await connection.ExecuteAsync(new CommandDefinition(@"
             UPDATE AppUser
             SET UserName = @UserName,
                 IsActive = @IsActive
@@ -126,13 +150,10 @@ public sealed class AppUserRepository : IAppUserRepository
                 request.IsActive,
             }, transaction, cancellationToken: cancellationToken));
 
-        if (affected == 0)
-        {
-            transaction.Rollback();
-            return false;
-        }
-
         await ReplaceRoleAssignmentsAsync(connection, transaction, request.UserId, request.RoleIds, cancellationToken);
+
+        var after = await GetByIdAsync(connection, transaction, request.UserId, cancellationToken);
+        await _auditWriter.LogUpdateAsync(connection, transaction, TableName, before, after!, cancellationToken);
 
         transaction.Commit();
         return true;
@@ -142,6 +163,13 @@ public sealed class AppUserRepository : IAppUserRepository
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
+
+        var row = await GetByIdAsync(connection, transaction, userId, cancellationToken);
+        if (row is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
 
         // Remove junction rows first to satisfy the FK constraint.
         await connection.ExecuteAsync(new CommandDefinition(
@@ -157,6 +185,8 @@ public sealed class AppUserRepository : IAppUserRepository
             transaction.Rollback();
             return false;
         }
+
+        await _auditWriter.LogDeleteAsync(connection, transaction, TableName, row, cancellationToken);
 
         transaction.Commit();
         return true;

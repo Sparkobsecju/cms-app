@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CMS.API.Data;
 using CMS.API.Services;
 using Microsoft.AspNetCore.Http;
 using Moq;
@@ -26,11 +25,10 @@ public class RowAuditWriterTests
 
     private static RowAuditWriter Writer(ClaimsPrincipal? user = null)
     {
-        var factory = new Mock<IDbConnectionFactory>(MockBehavior.Loose).Object;
         var accessor = new Mock<IHttpContextAccessor>();
         accessor.Setup(a => a.HttpContext)
                 .Returns(user is null ? null : new DefaultHttpContext { User = user });
-        return new RowAuditWriter(factory, accessor.Object);
+        return new RowAuditWriter(accessor.Object);
     }
 
     private static ClaimsPrincipal AuthedUser(params Claim[] claims) =>

@@ -1,5 +1,7 @@
+using System.Data;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Services;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -7,7 +9,10 @@ namespace CMS.API.Repositories;
 /// <summary>Dapper-based data access for <see cref="Course"/>.</summary>
 public sealed class CourseRepository : ICourseRepository
 {
+    private const string TableName = "Course";
+
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IRowAuditWriter _auditWriter;
 
     // Shared SELECT projection; FK display names come from flat JOIN aliases.
     private const string SelectColumns = @"
@@ -45,9 +50,10 @@ public sealed class CourseRepository : ICourseRepository
         LEFT JOIN CourseGroup g ON g.pkid = c.CourseGroup_pkid
         JOIN PublishStatus s ON s.pkid = c.PublishStatus_pkid";
 
-    public CourseRepository(IDbConnectionFactory connectionFactory)
+    public CourseRepository(IDbConnectionFactory connectionFactory, IRowAuditWriter auditWriter)
     {
         _connectionFactory = connectionFactory;
+        _auditWriter = auditWriter;
     }
 
     public async Task<IReadOnlyList<Course>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -98,12 +104,19 @@ public sealed class CourseRepository : ICourseRepository
     public async Task<Course?> GetByIdAsync(int pkid, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        return await GetByIdAsync(connection, transaction: null, pkid, cancellationToken);
+    }
+
+    // Transaction-aware read used by the mutating methods so the "before"/"after" audit snapshots
+    // (including the N-N pkid lists) see uncommitted state on the same connection.
+    private static async Task<Course?> GetByIdAsync(IDbConnection connection, IDbTransaction? transaction, int pkid, CancellationToken cancellationToken)
+    {
         var sql = $@"
             SELECT {SelectColumns} {FromJoins} WHERE c.pkid = @Pkid;
             SELECT Certification_pkid FROM CourseInCertification WHERE Course_pkid = @Pkid ORDER BY Certification_pkid;
             SELECT JobCategory_pkid FROM CourseJobCategories WHERE Course_pkid = @Pkid ORDER BY JobCategory_pkid;";
         using var multi = await connection.QueryMultipleAsync(
-            new CommandDefinition(sql, new { Pkid = pkid }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { Pkid = pkid }, transaction, cancellationToken: cancellationToken));
 
         var course = await multi.ReadSingleOrDefaultAsync<Course>();
         if (course is null)
@@ -139,6 +152,9 @@ public sealed class CourseRepository : ICourseRepository
         await ReplaceCertificationsAsync(connection, transaction, pkid, request.CertificationPkids, cancellationToken);
         await ReplaceJobCategoriesAsync(connection, transaction, pkid, request.JobCategoryPkids, cancellationToken);
 
+        var created = await GetByIdAsync(connection, transaction, pkid, cancellationToken);
+        await _auditWriter.LogInsertAsync(connection, transaction, TableName, created!, cancellationToken);
+
         transaction.Commit();
         return pkid;
     }
@@ -147,6 +163,13 @@ public sealed class CourseRepository : ICourseRepository
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
+
+        var before = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        if (before is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
 
         var affected = await connection.ExecuteAsync(new CommandDefinition(@"
             UPDATE Course SET
@@ -185,6 +208,9 @@ public sealed class CourseRepository : ICourseRepository
         await ReplaceCertificationsAsync(connection, transaction, request.Pkid, request.CertificationPkids, cancellationToken);
         await ReplaceJobCategoriesAsync(connection, transaction, request.Pkid, request.JobCategoryPkids, cancellationToken);
 
+        var after = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        await _auditWriter.LogUpdateAsync(connection, transaction, TableName, before, after!, cancellationToken);
+
         transaction.Commit();
         return true;
     }
@@ -193,6 +219,13 @@ public sealed class CourseRepository : ICourseRepository
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
+
+        var row = await GetByIdAsync(connection, transaction, pkid, cancellationToken);
+        if (row is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
 
         // Remove junction rows first to satisfy the FK constraints.
         await connection.ExecuteAsync(new CommandDefinition(
@@ -211,6 +244,8 @@ public sealed class CourseRepository : ICourseRepository
             transaction.Rollback();
             return false;
         }
+
+        await _auditWriter.LogDeleteAsync(connection, transaction, TableName, row, cancellationToken);
 
         transaction.Commit();
         return true;

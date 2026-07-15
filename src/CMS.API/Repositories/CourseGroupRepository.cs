@@ -1,5 +1,7 @@
+using System.Data;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Services;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -7,16 +9,20 @@ namespace CMS.API.Repositories;
 /// <summary>Dapper-based data access for <see cref="CourseGroup"/>.</summary>
 public sealed class CourseGroupRepository : ICourseGroupRepository
 {
+    private const string TableName = "CourseGroup";
+
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IRowAuditWriter _auditWriter;
 
     // Shared SELECT projection.
     private const string SelectColumns = @"
         g.pkid AS Pkid,
         g.Description AS Description";
 
-    public CourseGroupRepository(IDbConnectionFactory connectionFactory)
+    public CourseGroupRepository(IDbConnectionFactory connectionFactory, IRowAuditWriter auditWriter)
     {
         _connectionFactory = connectionFactory;
+        _auditWriter = auditWriter;
     }
 
     public async Task<IReadOnlyList<CourseGroup>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -46,36 +52,78 @@ public sealed class CourseGroupRepository : ICourseGroupRepository
     public async Task<CourseGroup?> GetByIdAsync(short pkid, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        return await GetByIdAsync(connection, transaction: null, pkid, cancellationToken);
+    }
+
+    // Transaction-aware read used by the mutating methods so the "before"/"after" audit snapshots
+    // see uncommitted state on the same connection.
+    private static async Task<CourseGroup?> GetByIdAsync(IDbConnection connection, IDbTransaction? transaction, short pkid, CancellationToken cancellationToken)
+    {
         var sql = $"SELECT {SelectColumns} FROM CourseGroup g WHERE g.pkid = @Pkid;";
         return await connection.QuerySingleOrDefaultAsync<CourseGroup>(
-            new CommandDefinition(sql, new { Pkid = pkid }, cancellationToken: cancellationToken));
+            new CommandDefinition(sql, new { Pkid = pkid }, transaction, cancellationToken: cancellationToken));
     }
 
     // pkid is smallint IDENTITY — assigned by the DB; read back via SCOPE_IDENTITY.
     public async Task<short> CreateAsync(CourseGroupRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        return await connection.ExecuteScalarAsync<short>(new CommandDefinition(@"
+        using var transaction = connection.BeginTransaction();
+
+        var pkid = await connection.ExecuteScalarAsync<short>(new CommandDefinition(@"
             INSERT INTO CourseGroup (Description) VALUES (@Description);
             SELECT CAST(SCOPE_IDENTITY() AS smallint);",
-            new { request.Description }, cancellationToken: cancellationToken));
+            new { request.Description }, transaction, cancellationToken: cancellationToken));
+
+        var created = await GetByIdAsync(connection, transaction, pkid, cancellationToken);
+        await _auditWriter.LogInsertAsync(connection, transaction, TableName, created!, cancellationToken);
+
+        transaction.Commit();
+        return pkid;
     }
 
     public async Task<bool> UpdateAsync(CourseGroupRequest request, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var affected = await connection.ExecuteAsync(new CommandDefinition(
+        using var transaction = connection.BeginTransaction();
+
+        var before = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        if (before is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
             "UPDATE CourseGroup SET Description = @Description WHERE pkid = @Pkid;",
-            new { request.Pkid, request.Description }, cancellationToken: cancellationToken));
-        return affected > 0;
+            new { request.Pkid, request.Description }, transaction, cancellationToken: cancellationToken));
+
+        var after = await GetByIdAsync(connection, transaction, request.Pkid, cancellationToken);
+        await _auditWriter.LogUpdateAsync(connection, transaction, TableName, before, after!, cancellationToken);
+
+        transaction.Commit();
+        return true;
     }
 
     public async Task<bool> DeleteAsync(short pkid, CancellationToken cancellationToken = default)
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
-        var affected = await connection.ExecuteAsync(new CommandDefinition(
+        using var transaction = connection.BeginTransaction();
+
+        var row = await GetByIdAsync(connection, transaction, pkid, cancellationToken);
+        if (row is null)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM CourseGroup WHERE pkid = @Pkid",
-            new { Pkid = pkid }, cancellationToken: cancellationToken));
-        return affected > 0;
+            new { Pkid = pkid }, transaction, cancellationToken: cancellationToken));
+
+        await _auditWriter.LogDeleteAsync(connection, transaction, TableName, row, cancellationToken);
+
+        transaction.Commit();
+        return true;
     }
 }

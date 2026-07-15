@@ -1,5 +1,5 @@
+using System.Data;
 using System.Security.Claims;
-using CMS.API.Data;
 using CMS.API.Models;
 using Dapper;
 
@@ -8,7 +8,8 @@ namespace CMS.API.Services;
 /// <summary>
 /// Generic <see cref="IRowAuditWriter"/> implementation. Derives the audit column values from
 /// any entity type via <see cref="RowAuditReflection"/>, resolves the acting user from the
-/// current request's JWT claims, and inserts one row into <c>dbo.RowAudit</c> with Dapper.
+/// current request's JWT claims, and inserts one row into <c>dbo.RowAudit</c> with Dapper on the
+/// caller-supplied connection/transaction.
 /// </summary>
 public sealed class RowAuditWriter : IRowAuditWriter
 {
@@ -23,27 +24,25 @@ public sealed class RowAuditWriter : IRowAuditWriter
         "name",
     };
 
-    private readonly IDbConnectionFactory _connectionFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public RowAuditWriter(IDbConnectionFactory connectionFactory, IHttpContextAccessor httpContextAccessor)
+    public RowAuditWriter(IHttpContextAccessor httpContextAccessor)
     {
-        _connectionFactory = connectionFactory;
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public Task LogInsertAsync(string tableName, object entity, CancellationToken cancellationToken = default) =>
-        InsertAsync(BuildInsertAudit(tableName, entity), cancellationToken);
+    public Task LogInsertAsync(IDbConnection connection, IDbTransaction? transaction, string tableName, object entity, CancellationToken cancellationToken = default) =>
+        InsertAsync(connection, transaction, BuildInsertAudit(tableName, entity), cancellationToken);
 
-    public Task LogUpdateAsync(string tableName, object before, object after, CancellationToken cancellationToken = default)
+    public Task LogUpdateAsync(IDbConnection connection, IDbTransaction? transaction, string tableName, object before, object after, CancellationToken cancellationToken = default)
     {
         var audit = BuildUpdateAudit(tableName, before, after);
         // Nothing changed → no audit row.
-        return audit is null ? Task.CompletedTask : InsertAsync(audit, cancellationToken);
+        return audit is null ? Task.CompletedTask : InsertAsync(connection, transaction, audit, cancellationToken);
     }
 
-    public Task LogDeleteAsync(string tableName, object entity, CancellationToken cancellationToken = default) =>
-        InsertAsync(BuildDeleteAudit(tableName, entity), cancellationToken);
+    public Task LogDeleteAsync(IDbConnection connection, IDbTransaction? transaction, string tableName, object entity, CancellationToken cancellationToken = default) =>
+        InsertAsync(connection, transaction, BuildDeleteAudit(tableName, entity), cancellationToken);
 
     /// <summary>Builds (but does not persist) the audit row for an Insert. Exposed for unit tests.</summary>
     public RowAudit BuildInsertAudit(string tableName, object entity) =>
@@ -97,9 +96,8 @@ public sealed class RowAuditWriter : IRowAuditWriter
         return SystemUser;
     }
 
-    private async Task InsertAsync(RowAudit audit, CancellationToken cancellationToken)
+    private static async Task InsertAsync(IDbConnection connection, IDbTransaction? transaction, RowAudit audit, CancellationToken cancellationToken)
     {
-        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
         const string sql = @"
             INSERT INTO RowAudit (TableName, UserName, PrimaryKeyValues, ActionType, ActionDesc, [DateTime])
             VALUES (@TableName, @UserName, @PrimaryKeyValues, @ActionType, @ActionDesc, @DateTime);";
@@ -114,6 +112,7 @@ public sealed class RowAuditWriter : IRowAuditWriter
                 audit.ActionDesc,
                 audit.DateTime,
             },
+            transaction,
             cancellationToken: cancellationToken));
     }
 }
