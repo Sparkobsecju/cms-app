@@ -29,7 +29,14 @@ export class App {
   // Only 系統管理 Admin → 角色 AppRole is wired; other groups are visual placeholders.
   protected readonly navGroups = signal<NavGroup[]>([
     { label: '首頁管理 Home', icon: 'pi pi-home', children: [] },
-    { label: '課程管理 Course', icon: 'pi pi-folder', children: [] },
+    {
+      label: '課程管理 Course',
+      icon: 'pi pi-folder',
+      expanded: true,
+      children: [
+        { label: '課程群組 CourseGroup', icon: 'pi pi-folder', route: '/course-groups' },
+      ],
+    },
     { label: '說明會 Seminar', icon: 'pi pi-comments', children: [] },
     { label: '活動管理 Promotion', icon: 'pi pi-megaphone', children: [] },
     { label: '線上報名 Forms', icon: 'pi pi-file-edit', children: [] },
@@ -41,6 +48,7 @@ export class App {
       expanded: true,
       children: [
         { label: '角色 AppRole', icon: 'pi pi-id-card', route: '/app-roles' },
+        { label: '發布狀態 PublishStatus', icon: 'pi pi-flag', route: '/publish-statuses' },
         { label: '使用者 AppUser', icon: 'pi pi-user' },
       ],
     },

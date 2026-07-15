@@ -22,4 +22,22 @@ public sealed class LookupRepository : ILookupRepository
             cancellationToken: cancellationToken));
         return rows.AsList();
     }
+
+    public async Task<IReadOnlyList<PublishStatusLookup>> GetPublishStatusesAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<PublishStatusLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Description FROM PublishStatus ORDER BY pkid ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<CourseGroupLookup>> GetCourseGroupsAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<CourseGroupLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Description FROM CourseGroup ORDER BY pkid ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
 }
