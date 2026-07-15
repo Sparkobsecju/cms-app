@@ -51,9 +51,13 @@ builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
 builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
 // Cross-cutting audit writer; repositories will call it after Insert/Update/Delete.
 builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
+
+// Login: mints signed JWT access tokens (stateless — no per-request state).
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 var app = builder.Build();
 
