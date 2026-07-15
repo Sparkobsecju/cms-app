@@ -1,5 +1,6 @@
 using CMS.API.Data;
 using CMS.API.Repositories;
+using CMS.API.Services;
 using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,9 @@ SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
 SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 builder.Services.AddControllers();
+
+// Exposes the current request (and its JWT claims) to cross-cutting services like RowAuditWriter.
+builder.Services.AddHttpContextAccessor();
 
 // Swagger / OpenAPI (Swashbuckle).
 builder.Services.AddEndpointsApiExplorer();
@@ -45,6 +49,9 @@ builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
+
+// Cross-cutting audit writer; repositories will call it after Insert/Update/Delete.
+builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
 
 var app = builder.Build();
 
