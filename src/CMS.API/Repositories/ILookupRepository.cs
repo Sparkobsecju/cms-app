@@ -13,4 +13,13 @@ public interface ILookupRepository
 
     /// <summary>Returns course groups for the Course form select.</summary>
     Task<IReadOnlyList<CourseGroupLookup>> GetCourseGroupsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns partners for the Course form select, ordered by DisplayOrder.</summary>
+    Task<IReadOnlyList<PartnerLookup>> GetPartnersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns certifications for the Course form multi-select.</summary>
+    Task<IReadOnlyList<CertificationLookup>> GetCertificationsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns job categories for the Course form multi-select.</summary>
+    Task<IReadOnlyList<JobCategoryLookup>> GetJobCategoriesAsync(CancellationToken cancellationToken = default);
 }

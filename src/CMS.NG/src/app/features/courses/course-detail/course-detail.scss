@@ -1,0 +1,7 @@
+.pre {
+  white-space: pre-wrap;
+}
+
+:host ::ng-deep .assoc-tag {
+  margin: 0 0.35rem 0.35rem 0;
+}

@@ -1,0 +1,78 @@
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>檢視課程</h1>
+      @if (course(); as c) {
+        <span class="subtitle">主代碼 {{ c.pkid }}</span>
+      }
+    </div>
+    <div class="page-actions">
+      <button pButton type="button" label="返回" icon="pi pi-arrow-left"
+              class="p-button-outlined p-button-secondary" (click)="back()"></button>
+      <button pButton type="button" label="編輯" icon="pi pi-pencil" (click)="edit()"></button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card text-muted">載入中…</div>
+  } @else if (course(); as c) {
+    <div class="card">
+      <h2 class="card-title">課程資料</h2>
+      <dl class="detail-grid">
+        <dt>主代碼</dt><dd>{{ c.pkid }}</dd>
+        <dt>顯示順序</dt><dd>{{ c.displayOrder }}</dd>
+        <dt>課程名稱</dt><dd>{{ c.title }}</dd>
+        <dt>官方課程名稱</dt><dd>{{ c.officialTitle }}</dd>
+        <dt>簡介代碼</dt><dd>{{ c.courseId }}</dd>
+        <dt>科目代碼</dt><dd>{{ c.prodCourseId }}</dd>
+        <dt>友善網址</dt><dd>{{ c.friendlyUrl }}</dd>
+        <dt>原廠</dt><dd>{{ c.partnerName }}</dd>
+        <dt>課程群組</dt><dd>{{ c.courseGroupDescription }}</dd>
+        <dt>上架狀態</dt><dd>{{ c.publishStatusDescription }}</dd>
+        <dt>上架日期</dt><dd>{{ c.scheduleOn }}</dd>
+        <dt>下架日期</dt><dd>{{ c.scheduleOff }}</dd>
+        <dt>時數</dt><dd>{{ c.hour }}</dd>
+        <dt>定價</dt><dd>{{ c.listPrice }}</dd>
+        <dt>點數</dt><dd>{{ c.learningCredit }}</dd>
+        <dt>允許重聽</dt>
+        <dd><p-tag [value]="c.canRepeat ? '是' : '否'" [severity]="c.canRepeat ? 'success' : 'secondary'" /></dd>
+        <dt>教材</dt><dd>{{ c.material }}</dd>
+        <dt>課程目標</dt><dd class="pre">{{ c.objective }}</dd>
+        <dt>適合對象</dt><dd class="pre">{{ c.target }}</dd>
+        <dt>先備知識</dt><dd class="pre">{{ c.prerequisites }}</dd>
+        <dt>課程大綱</dt><dd class="pre">{{ c.outline }}</dd>
+        <dt>考試／認證說明</dt><dd class="pre">{{ c.towardCertOrExam }}</dd>
+        <dt>備註</dt><dd class="pre">{{ c.note }}</dd>
+        <dt>其他資訊</dt><dd class="pre">{{ c.otherInfo }}</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">關聯資料</h2>
+      <dl class="detail-grid">
+        <dt>認證 Certification</dt>
+        <dd>
+          @if (certificationNames().length) {
+            @for (name of certificationNames(); track name) {
+              <p-tag [value]="name" severity="info" styleClass="assoc-tag" />
+            }
+          } @else {
+            <span class="text-muted">無</span>
+          }
+        </dd>
+        <dt>職務類別 JobCategory</dt>
+        <dd>
+          @if (jobCategoryNames().length) {
+            @for (name of jobCategoryNames(); track name) {
+              <p-tag [value]="name" severity="info" styleClass="assoc-tag" />
+            }
+          } @else {
+            <span class="text-muted">無</span>
+          }
+        </dd>
+      </dl>
+    </div>
+  } @else {
+    <div class="card text-muted">查無此課程</div>
+  }
+</div>

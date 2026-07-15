@@ -34,6 +34,7 @@ export class App {
       icon: 'pi pi-folder',
       expanded: true,
       children: [
+        { label: '課程 Course', icon: 'pi pi-book', route: '/courses' },
         { label: '課程群組 CourseGroup', icon: 'pi pi-folder', route: '/course-groups' },
       ],
     },

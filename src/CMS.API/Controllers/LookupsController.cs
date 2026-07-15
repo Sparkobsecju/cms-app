@@ -43,4 +43,31 @@ public class LookupsController : ControllerBase
         var groups = await _repository.GetCourseGroupsAsync(cancellationToken);
         return Ok(groups);
     }
+
+    /// <summary>Partners (for the Course form select).</summary>
+    [HttpGet("partners")]
+    [ProducesResponseType(typeof(IReadOnlyList<PartnerLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PartnerLookup>>> GetPartners(CancellationToken cancellationToken)
+    {
+        var partners = await _repository.GetPartnersAsync(cancellationToken);
+        return Ok(partners);
+    }
+
+    /// <summary>Certifications (for the Course form multi-select).</summary>
+    [HttpGet("certifications")]
+    [ProducesResponseType(typeof(IReadOnlyList<CertificationLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CertificationLookup>>> GetCertifications(CancellationToken cancellationToken)
+    {
+        var certifications = await _repository.GetCertificationsAsync(cancellationToken);
+        return Ok(certifications);
+    }
+
+    /// <summary>Job categories (for the Course form multi-select).</summary>
+    [HttpGet("job-categories")]
+    [ProducesResponseType(typeof(IReadOnlyList<JobCategoryLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<JobCategoryLookup>>> GetJobCategories(CancellationToken cancellationToken)
+    {
+        var jobCategories = await _repository.GetJobCategoriesAsync(cancellationToken);
+        return Ok(jobCategories);
+    }
 }
