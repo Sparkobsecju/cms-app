@@ -1,4 +1,5 @@
 using CMS.API.Data;
+using CMS.API.Middleware;
 using CMS.API.Repositories;
 using CMS.API.Services;
 using Dapper;
@@ -55,6 +56,9 @@ builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
 builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
 
 var app = builder.Build();
+
+// First in the pipeline: catch any unhandled exception and return a safe 500.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Swagger UI at /swagger.
 app.UseSwagger();

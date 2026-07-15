@@ -129,5 +129,9 @@ export const routes: Routes = [
         (m) => m.FeaturedPromoItemList,
       ),
   },
+  {
+    path: 'login',
+    loadComponent: () => import('@features/login/login').then((m) => m.Login),
+  },
   { path: '**', redirectTo: 'app-roles' },
 ];
