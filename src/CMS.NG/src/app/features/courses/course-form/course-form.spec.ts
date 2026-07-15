@@ -70,8 +70,30 @@ function fillRequired(component: CourseForm): void {
   });
 }
 
+/** Asserts the action toolbar is pinned (sticky) and still exposes Save/Cancel. */
+function assertStickyToolbar(fixture: ComponentFixture<CourseForm>): void {
+  const header = fixture.nativeElement.querySelector('.page-header.sticky-toolbar') as HTMLElement;
+  expect(header).withContext('action toolbar').toBeTruthy();
+  expect(getComputedStyle(header).position).withContext('pinned toolbar').toBe('sticky');
+
+  const labels = Array.from(header.querySelectorAll('.page-actions button'))
+    .map((b) => b.textContent?.trim() ?? '');
+  expect(labels.some((l) => l.includes('儲存'))).withContext('Save button present').toBeTrue();
+  expect(labels.some((l) => l.includes('取消'))).withContext('Cancel button present').toBeTrue();
+}
+
 describe('CourseForm', () => {
   afterEach(() => TestBed.resetTestingModule());
+
+  it('pins the action toolbar with Save/Cancel in add mode', () => {
+    const { fixture } = setup(null);
+    assertStickyToolbar(fixture);
+  });
+
+  it('pins the action toolbar with Save/Cancel in edit mode', () => {
+    const { fixture } = setup('1');
+    assertStickyToolbar(fixture);
+  });
 
   it('builds an empty form in add mode', () => {
     const { component, service } = setup(null);
