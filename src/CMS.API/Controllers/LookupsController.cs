@@ -79,4 +79,22 @@ public class LookupsController : ControllerBase
         var jobCategories = await _repository.GetJobCategoriesAsync(cancellationToken);
         return Ok(jobCategories);
     }
+
+    /// <summary>Training centers (for the FeaturedPromoItem tabs / filter).</summary>
+    [HttpGet("training-centers")]
+    [ProducesResponseType(typeof(IReadOnlyList<TrainingCenterLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TrainingCenterLookup>>> GetTrainingCenters(CancellationToken cancellationToken)
+    {
+        var centers = await _repository.GetTrainingCentersAsync(cancellationToken);
+        return Ok(centers);
+    }
+
+    /// <summary>Promotions (for the FeaturedPromoItem PromoCode lookup).</summary>
+    [HttpGet("promotions")]
+    [ProducesResponseType(typeof(IReadOnlyList<PromotionLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PromotionLookup>>> GetPromotions(CancellationToken cancellationToken)
+    {
+        var promotions = await _repository.GetPromotionsAsync(cancellationToken);
+        return Ok(promotions);
+    }
 }

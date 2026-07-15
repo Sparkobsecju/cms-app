@@ -28,7 +28,14 @@ export class App {
 
   // Only 系統管理 Admin → 角色 AppRole is wired; other groups are visual placeholders.
   protected readonly navGroups = signal<NavGroup[]>([
-    { label: '首頁管理 Home', icon: 'pi pi-home', children: [] },
+    {
+      label: '首頁管理 Home',
+      icon: 'pi pi-home',
+      expanded: true,
+      children: [
+        { label: '上稿作業 FeaturedPromoItem', icon: 'pi pi-megaphone', route: '/featured-promo-items' },
+      ],
+    },
     {
       label: '課程管理 Course',
       icon: 'pi pi-folder',

@@ -8,6 +8,8 @@ solution `src/CMS.slnx`.
 - `dotnet build|test CMS.slnx`; `dotnet run --project CMS.API` (Swagger `/swagger`).
 - In `src/CMS.NG`: `npm start`, `npx ng test --watch=false --browsers=ChromeHeadless`, `npx ng build`.
 - Start API before `ng serve`; backend tests need no DB, e2e needs `CMS` on `.\SQLEXPRESS`.
+- `database/*.sql` is **schema only** (no seed data; the `CMS` DB is loaded separately). If a
+  date-windowed list looks empty, the data predates the current week — see setup-notes → *Database data*.
 
 ## Reference docs — read before the matching task
 - **Build/change a feature** — backend + frontend rules, reference-feature catalog,

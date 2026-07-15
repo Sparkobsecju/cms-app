@@ -122,5 +122,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('@features/courses/course-detail/course-detail').then((m) => m.CourseDetail),
   },
+  {
+    path: 'featured-promo-items',
+    loadComponent: () =>
+      import('@features/featured-promo-items/featured-promo-item-list/featured-promo-item-list').then(
+        (m) => m.FeaturedPromoItemList,
+      ),
+  },
   { path: '**', redirectTo: 'app-roles' },
 ];

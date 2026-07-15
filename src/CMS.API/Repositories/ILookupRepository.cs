@@ -25,4 +25,11 @@ public interface ILookupRepository
 
     /// <summary>Returns job categories for the Course form multi-select.</summary>
     Task<IReadOnlyList<JobCategoryLookup>> GetJobCategoriesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns training centers for the FeaturedPromoItem tabs, ordered by DisplayOrder.</summary>
+    Task<IReadOnlyList<TrainingCenterLookup>> GetTrainingCentersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Returns promotions (pkid + PromoCode + Topic/Description) so the
+    /// FeaturedPromoItem form can resolve an entered PromoCode to its pkid.</summary>
+    Task<IReadOnlyList<PromotionLookup>> GetPromotionsAsync(CancellationToken cancellationToken = default);
 }

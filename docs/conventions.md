@@ -32,6 +32,7 @@ Mirror the closest existing one:
 - **Partner** (`features/partners`) — IDENTITY PK + provides a lookup, but with several required string columns + a nullable one + `DisplayOrder` sort; the reference for a plain multi-field master table (no FKs, no N-N).
 - **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example.
 - **AppUser** (`features/app-users`) — string PK + N-N + a server-managed secret field (`PasswordHash`, never in any DTO) + an action endpoint (`POST /{id}/reset-password`). Spec: `spec/auth/AppUser.md`.
+- **FeaturedPromoItem** (`features/featured-promo-items`) — IDENTITY PK + two FK-JOIN displays (`PromoCode` from Promotion2, `TrainingCenterName`) + a **bespoke non-tabular list** instead of the standard `p-table`: a training-center tab bar, a Mon–Sun week navigator, and a day×slot grid with **inline** add/edit (no separate detail/form routes), Copy/Paste, and a slot-move **action endpoint** (`POST /{id}/move/{up|down}` swaps neighbouring slots in one transaction, parking at slot 0 to dodge the `UNIQUE(ScheduleOn, TrainingCenter_pkid, Slot)` index). The form resolves an entered PromoCode → `Promotion_pkid` client-side via `GET /api/lookups/promotions`. The reference for a **custom-UI feature** (inline editing, action endpoint, lookup-driven FK). Spec: `spec/custom/FeaturedPromoItem/`.
 
 ## New feature build order
 

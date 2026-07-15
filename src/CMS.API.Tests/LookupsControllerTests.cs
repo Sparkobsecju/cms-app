@@ -120,4 +120,45 @@ public class LookupsControllerTests
         var returned = Assert.IsAssignableFrom<IReadOnlyList<JobCategoryLookup>>(ok.Value);
         Assert.Equal(2, returned.Count);
     }
+
+    [Fact]
+    public async Task GetTrainingCenters_ReturnsCenters()
+    {
+        var repo = new Mock<ILookupRepository>(MockBehavior.Strict);
+        var centers = new List<TrainingCenterLookup>
+        {
+            new() { Pkid = 1, Name = "台北" },
+            new() { Pkid = 2, Name = "新竹" },
+        };
+        repo.Setup(r => r.GetTrainingCentersAsync(It.IsAny<CancellationToken>())).ReturnsAsync(centers);
+        var controller = new LookupsController(repo.Object);
+
+        var result = await controller.GetTrainingCenters(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var returned = Assert.IsAssignableFrom<IReadOnlyList<TrainingCenterLookup>>(ok.Value);
+        Assert.Equal(2, returned.Count);
+    }
+
+    // The PromoCode lookup: the FeaturedPromoItem form resolves an entered PromoCode to its pkid.
+    [Fact]
+    public async Task GetPromotions_ReturnsPromotions_ForPromoCodeLookup()
+    {
+        var repo = new Mock<ILookupRepository>(MockBehavior.Strict);
+        var promotions = new List<PromotionLookup>
+        {
+            new() { Pkid = 101, PromoCode = "20251204_SkillTrainAI", Topic = "成為能AI協作的程式設計師", Description = "轉職就業養成班" },
+            new() { Pkid = 102, PromoCode = "251211_GoogleAI", Topic = "Google AI工具一次掌握", Description = "不需技術基礎" },
+        };
+        repo.Setup(r => r.GetPromotionsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(promotions);
+        var controller = new LookupsController(repo.Object);
+
+        var result = await controller.GetPromotions(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var returned = Assert.IsAssignableFrom<IReadOnlyList<PromotionLookup>>(ok.Value);
+        Assert.Equal(2, returned.Count);
+        // The pkid a PromoCode resolves to is what the form writes into Promotion_pkid.
+        Assert.Equal(101, returned.Single(p => p.PromoCode == "20251204_SkillTrainAI").Pkid);
+    }
 }

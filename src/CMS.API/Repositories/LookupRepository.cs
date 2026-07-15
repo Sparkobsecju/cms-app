@@ -80,4 +80,22 @@ public sealed class LookupRepository : ILookupRepository
             cancellationToken: cancellationToken));
         return rows.AsList();
     }
+
+    public async Task<IReadOnlyList<TrainingCenterLookup>> GetTrainingCentersAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<TrainingCenterLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Name FROM TrainingCenter ORDER BY DisplayOrder ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<PromotionLookup>> GetPromotionsAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<PromotionLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, PromoCode, Topic, Description FROM Promotion2 ORDER BY PromoCode ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
 }

@@ -7,6 +7,7 @@ import { AppRoleLookup } from '@core/models/app-user.model';
 import { PublishStatusLookup } from '@core/models/publish-status.model';
 import { CourseGroupLookup } from '@core/models/course-group.model';
 import { CertificationLookup, JobCategoryLookup, PartnerLookup } from '@core/models/course.model';
+import { PromotionLookup, TrainingCenterLookup } from '@core/models/featured-promo-item.model';
 
 /** Slim lookup lists used to populate form selects. */
 @Injectable({ providedIn: 'root' })
@@ -47,5 +48,15 @@ export class LookupService {
   /** Job categories (for the Course form multi-select). */
   jobCategories(): Observable<JobCategoryLookup[]> {
     return this.http.get<JobCategoryLookup[]>(`${this.baseUrl}/job-categories`);
+  }
+
+  /** Training centers (for the FeaturedPromoItem tabs / filter). */
+  trainingCenters(): Observable<TrainingCenterLookup[]> {
+    return this.http.get<TrainingCenterLookup[]>(`${this.baseUrl}/training-centers`);
+  }
+
+  /** Promotions (for the FeaturedPromoItem PromoCode lookup). */
+  promotions(): Observable<PromotionLookup[]> {
+    return this.http.get<PromotionLookup[]>(`${this.baseUrl}/promotions`);
   }
 }

@@ -1,0 +1,23 @@
+<form class="promo-form" [formGroup]="form" (ngSubmit)="submit()">
+  <div class="field field-inline">
+    <label>PromoCode:</label>
+    <input pInputText type="text" formControlName="promoCode"
+           (blur)="lookupPromoCode()" (keydown.enter)="$event.preventDefault(); lookupPromoCode()"
+           placeholder="輸入活動代碼後按 Enter 帶入" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <label>Topic:</label>
+    <input pInputText type="text" formControlName="topic" />
+  </div>
+
+  <div class="field">
+    <label>Description:</label>
+    <input pInputText type="text" formControlName="description" />
+  </div>
+
+  <div class="actions">
+    <button type="submit" class="link-btn">Save</button>
+    <button type="button" class="link-btn" (click)="cancel()">Cancel</button>
+  </div>
+</form>
