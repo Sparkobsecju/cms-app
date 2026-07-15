@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { RowAuditService } from '@core/services/row-audit.service';
 import { of } from 'rxjs';
 import { PartnerDetail } from './partner-detail';
 import { PartnerService } from '@core/services/partner.service';
@@ -30,6 +31,7 @@ describe('PartnerDetail', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        { provide: RowAuditService, useValue: { history: () => of([]) } },
         { provide: PartnerService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } } },
       ],

@@ -7,6 +7,9 @@
       }
     </div>
     <div class="page-actions">
+      @if (role(); as r) {
+        <app-row-audit-badge tableName="AppRole" [pkid]="r.pkid" />
+      }
       <button pButton type="button" label="返回" icon="pi pi-arrow-left"
               class="p-button-outlined p-button-secondary" (click)="back()"></button>
       <button pButton type="button" label="編輯" icon="pi pi-pencil" (click)="edit()"></button>

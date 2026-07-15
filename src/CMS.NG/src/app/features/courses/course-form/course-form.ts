@@ -15,6 +15,7 @@ import { MessageService } from 'primeng/api';
 import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
 import { Course, CourseRequest } from '@core/models/course.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 interface SelectOption { label: string; value: number | null; }
 
@@ -23,7 +24,7 @@ interface SelectOption { label: string; value: number | null; }
   selector: 'app-course-form',
   imports: [
     CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, InputNumberModule,
-    TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, CheckboxModule,
+    TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, CheckboxModule, RowAuditBadge,
   ],
   templateUrl: './course-form.html',
   styleUrl: './course-form.scss',

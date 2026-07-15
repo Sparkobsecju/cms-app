@@ -4,11 +4,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { PartnerService } from '@core/services/partner.service';
 import { Partner } from '@core/models/partner.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a partner (檢視原廠). */
 @Component({
   selector: 'app-partner-detail',
-  imports: [CommonModule, ButtonModule],
+  imports: [CommonModule, ButtonModule, RowAuditBadge],
   templateUrl: './partner-detail.html',
   styleUrl: './partner-detail.scss',
 })

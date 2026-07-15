@@ -7,11 +7,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { PartnerService } from '@core/services/partner.service';
 import { PartnerRequest } from '@core/models/partner.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Add / edit form for a partner (新增／編輯原廠). */
 @Component({
   selector: 'app-partner-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, RowAuditBadge],
   templateUrl: './partner-form.html',
   styleUrl: './partner-form.scss',
 })

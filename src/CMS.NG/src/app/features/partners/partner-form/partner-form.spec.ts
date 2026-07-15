@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { RowAuditService } from '@core/services/row-audit.service';
 import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 import { PartnerForm } from './partner-form';
@@ -28,6 +29,7 @@ function setup(paramId: string | null) {
     providers: [
       provideRouter([]),
       provideNoopAnimations(),
+      { provide: RowAuditService, useValue: { history: () => of([]) } },
       MessageService,
       { provide: PartnerService, useValue: service },
       {

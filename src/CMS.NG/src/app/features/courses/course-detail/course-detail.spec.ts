@@ -1,6 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { RowAuditService } from '@core/services/row-audit.service';
 import { of } from 'rxjs';
 import { CourseDetail } from './course-detail';
 import { CourseService } from '@core/services/course.service';
@@ -42,6 +43,7 @@ describe('CourseDetail', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        { provide: RowAuditService, useValue: { history: () => of([]) } },
         { provide: CourseService, useValue: service },
         { provide: LookupService, useValue: lookups },
         { provide: QrService, useValue: qr },

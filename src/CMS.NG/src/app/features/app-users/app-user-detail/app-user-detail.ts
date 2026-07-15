@@ -9,11 +9,12 @@ import { forkJoin } from 'rxjs';
 import { AppUserService } from '@core/services/app-user.service';
 import { LookupService } from '@core/services/lookup.service';
 import { AppUser, AppRoleLookup } from '@core/models/app-user.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a user (檢視使用者). */
 @Component({
   selector: 'app-app-user-detail',
-  imports: [CommonModule, ButtonModule, ChipModule, TagModule],
+  imports: [CommonModule, ButtonModule, ChipModule, TagModule, RowAuditBadge],
   templateUrl: './app-user-detail.html',
   styleUrl: './app-user-detail.scss',
 })

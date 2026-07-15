@@ -8,11 +8,12 @@ import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
 import { QrService } from '@core/services/qr.service';
 import { Course } from '@core/models/course.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a course (檢視課程). */
 @Component({
   selector: 'app-course-detail',
-  imports: [CommonModule, ButtonModule, TagModule],
+  imports: [CommonModule, ButtonModule, TagModule, RowAuditBadge],
   templateUrl: './course-detail.html',
   styleUrl: './course-detail.scss',
 })

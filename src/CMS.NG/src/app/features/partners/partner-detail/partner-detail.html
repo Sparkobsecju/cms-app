@@ -7,6 +7,9 @@
       }
     </div>
     <div class="page-actions">
+      @if (partner(); as p) {
+        <app-row-audit-badge tableName="Partner" [pkid]="p.pkid" />
+      }
       <button pButton type="button" label="返回" icon="pi pi-arrow-left"
               class="p-button-outlined p-button-secondary" (click)="back()"></button>
       <button pButton type="button" label="查看課程" icon="pi pi-book"

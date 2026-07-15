@@ -11,6 +11,7 @@ import { forkJoin, of } from 'rxjs';
 import { AppUserService } from '@core/services/app-user.service';
 import { LookupService } from '@core/services/lookup.service';
 import { AppUserRequest, AppRoleLookup } from '@core/models/app-user.model';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 interface RoleOption { roleId: string; label: string; }
 
@@ -19,7 +20,7 @@ interface RoleOption { roleId: string; label: string; }
   selector: 'app-app-user-form',
   imports: [
     CommonModule, ReactiveFormsModule, ButtonModule,
-    InputTextModule, CheckboxModule, MultiSelectModule,
+    InputTextModule, CheckboxModule, MultiSelectModule, RowAuditBadge,
   ],
   templateUrl: './app-user-form.html',
   styleUrl: './app-user-form.scss',
@@ -36,6 +37,8 @@ export class AppUserForm implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly roleOptions = signal<RoleOption[]>([]);
+  // Numeric pkid of the loaded record, for the Row Audit badge (edit mode only).
+  protected readonly recordPkid = signal<number | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     userId: ['', Validators.required],
@@ -55,6 +58,7 @@ export class AppUserForm implements OnInit {
       next: ({ roles, user }) => {
         this.roleOptions.set(this.toOptions(roles));
         if (user) {
+          this.recordPkid.set(user.pkid);
           this.form.patchValue({
             userId: user.userId,
             userName: user.userName,

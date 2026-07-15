@@ -7,6 +7,9 @@
       }
     </div>
     <div class="page-actions">
+      @if (user(); as u) {
+        <app-row-audit-badge tableName="AppUser" [pkid]="u.pkid" />
+      }
       <button pButton type="button" label="返回" icon="pi pi-arrow-left"
               class="p-button-outlined p-button-secondary" (click)="back()"></button>
       <button pButton type="button" label="重設密碼" icon="pi pi-key"
