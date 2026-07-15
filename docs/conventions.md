@@ -23,6 +23,15 @@ one-time rationale + reference-feature decisions live in [setup-notes.md](setup-
 - Service `get(id)`/`delete(id)` must `encodeURIComponent` for string PKs (numeric IDENTITY PKs need none). List: sortable `p-table` + `p-drawer` filter, session keys `{table}-list-filters|-sort|-page`. Filter drawer FK dropdowns use `p-select appendTo="body"`; date columns use `p-datepicker` range pairs (ISO↔Date via local parts). Form: Reactive Forms, `forkJoin` lookups, string PK disabled in edit, FK `p-select`, N-N `p-multiselect`.
 - Specs: `HttpTestingController` (services), spy-object stubs (components).
 
+## Reference features
+
+Mirror the closest existing one:
+- **AppRole** (`features/app-roles`) — string PK + N-N.
+- **PublishStatus** (`features/publish-statuses`) — caller-supplied tinyint PK.
+- **CourseGroup** (`features/course-groups`) — IDENTITY PK + provides a lookup.
+- **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example.
+- **AppUser** (`features/app-users`) — string PK + N-N + a server-managed secret field (`PasswordHash`, never in any DTO) + an action endpoint (`POST /{id}/reset-password`). Spec: `spec/auth/AppUser.md`.
+
 ## New feature build order
 
 Spec from `spec/feature-spec.template.md`, then:
@@ -30,4 +39,4 @@ Spec from `spec/feature-spec.template.md`, then:
 2. Frontend: model → service → components → sidebar → specs.
 3. Verify both (`dotnet test`, `ng test`).
 
-Mirror the closest existing reference feature (see CLAUDE.md for the choices).
+Mirror the closest existing reference feature (see **Reference features** above).

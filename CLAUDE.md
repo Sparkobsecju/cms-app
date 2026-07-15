@@ -11,14 +11,8 @@ Stack: `CMS.API` (.NET 9, Dapper, port 5000), `CMS.API.Tests` (xUnit+Moq), `CMS.
 - Start API before `ng serve`; backend tests need no DB, e2e needs `CMS` on `.\SQLEXPRESS`.
 
 ## Building a feature
-Mirror the closest existing reference feature:
-- **AppRole** (`features/app-roles`) — string PK + N-N.
-- **PublishStatus** (`features/publish-statuses`) — caller-supplied tinyint PK.
-- **CourseGroup** (`features/course-groups`) — IDENTITY PK + provides a lookup.
-- **Course** (`features/courses`) — IDENTITY PK + FK-JOIN display + two N-N + date fields; the most complete example.
-- **AppUser** (`features/app-users`) — string PK + N-N + a server-managed secret field (`PasswordHash`, never in any DTO) + an action endpoint (`POST /{id}/reset-password`). Spec: `spec/auth/AppUser.md`.
-
-Backend + frontend build rules: **[docs/conventions.md](docs/conventions.md)**.
+Backend + frontend rules, the reference-feature catalog (which existing feature to
+mirror), and build order live in **[docs/conventions.md](docs/conventions.md)**.
 One-time setup, layout, and reference-feature rationale: [docs/setup-notes.md](docs/setup-notes.md).
 
 ## gstack
