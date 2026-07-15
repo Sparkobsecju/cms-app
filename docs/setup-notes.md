@@ -1,7 +1,7 @@
 # Setup Notes & Design Decisions
 
-One-time context and rationale for the CMS full-stack app. Durable working conventions
-live in the root `CLAUDE.md`; this file holds the background it links to.
+One-time context and rationale for the CMS full-stack app. Recurring build rules live
+in [conventions.md](conventions.md); this file holds the background they rest on.
 
 ## Repository layout
 

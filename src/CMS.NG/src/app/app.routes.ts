@@ -23,6 +23,26 @@ export const routes: Routes = [
       import('@features/app-roles/app-role-detail/app-role-detail').then((m) => m.AppRoleDetail),
   },
   {
+    path: 'app-users',
+    loadComponent: () =>
+      import('@features/app-users/app-user-list/app-user-list').then((m) => m.AppUserList),
+  },
+  {
+    path: 'app-users/new',
+    loadComponent: () =>
+      import('@features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+  },
+  {
+    path: 'app-users/:id/edit',
+    loadComponent: () =>
+      import('@features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+  },
+  {
+    path: 'app-users/:id',
+    loadComponent: () =>
+      import('@features/app-users/app-user-detail/app-user-detail').then((m) => m.AppUserDetail),
+  },
+  {
     path: 'publish-statuses',
     loadComponent: () =>
       import('@features/publish-statuses/publish-status-list/publish-status-list').then((m) => m.PublishStatusList),

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { AppUserLookup } from '@core/models/app-role.model';
+import { AppRoleLookup } from '@core/models/app-user.model';
 import { PublishStatusLookup } from '@core/models/publish-status.model';
 import { CourseGroupLookup } from '@core/models/course-group.model';
 import { CertificationLookup, JobCategoryLookup, PartnerLookup } from '@core/models/course.model';
@@ -16,6 +17,11 @@ export class LookupService {
   /** Active application users (for the role users multi-select). */
   appUsers(): Observable<AppUserLookup[]> {
     return this.http.get<AppUserLookup[]>(`${this.baseUrl}/app-users`);
+  }
+
+  /** Application roles (for the user roles multi-select). */
+  appRoles(): Observable<AppRoleLookup[]> {
+    return this.http.get<AppRoleLookup[]>(`${this.baseUrl}/app-roles`);
   }
 
   /** Publishing statuses (for Course/Promotion form selects). */

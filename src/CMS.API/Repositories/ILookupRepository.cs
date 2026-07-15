@@ -8,6 +8,9 @@ public interface ILookupRepository
     /// <summary>Returns active application users for the role users multi-select.</summary>
     Task<IReadOnlyList<AppUserLookup>> GetAppUsersAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Returns application roles for the user roles multi-select.</summary>
+    Task<IReadOnlyList<AppRoleLookup>> GetAppRolesAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Returns publishing statuses for Course/Promotion form selects.</summary>
     Task<IReadOnlyList<PublishStatusLookup>> GetPublishStatusesAsync(CancellationToken cancellationToken = default);
 

@@ -26,6 +26,15 @@ public class LookupsController : ControllerBase
         return Ok(users);
     }
 
+    /// <summary>Application roles (for the user roles multi-select).</summary>
+    [HttpGet("app-roles")]
+    [ProducesResponseType(typeof(IReadOnlyList<AppRoleLookup>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AppRoleLookup>>> GetAppRoles(CancellationToken cancellationToken)
+    {
+        var roles = await _repository.GetAppRolesAsync(cancellationToken);
+        return Ok(roles);
+    }
+
     /// <summary>Publishing statuses (for Course/Promotion form selects).</summary>
     [HttpGet("publish-statuses")]
     [ProducesResponseType(typeof(IReadOnlyList<PublishStatusLookup>), StatusCodes.Status200OK)]

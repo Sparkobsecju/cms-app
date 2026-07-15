@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .full-width,
+:host ::ng-deep .full-width.p-multiselect {
+  width: 100%;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+/* wrap selected-role chips in the multiselect label area */
+:host ::ng-deep .p-multiselect .p-multiselect-label {
+  white-space: normal;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
