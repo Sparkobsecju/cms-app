@@ -1,13 +1,16 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
+import { MessageService } from 'primeng/api';
 import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
 import { QrService } from '@core/services/qr.service';
 import { Course } from '@core/models/course.model';
+import { saveBlob } from '@core/utils/download';
 import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 /** Read-only detail page for a course (檢視課程). */
@@ -23,9 +26,12 @@ export class CourseDetail implements OnInit {
   private readonly qr = inject(QrService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly messages = inject(MessageService);
 
   protected readonly course = signal<Course | null>(null);
   protected readonly loading = signal(true);
+  /** True while the brochure PDF is being fetched (blocks a re-click). */
+  protected readonly pdfDownloading = signal(false);
 
   /** Public page URL encoded in the QR code (uuu.com.tw). */
   protected readonly qrUrl = computed(() => {
@@ -94,6 +100,30 @@ export class CourseDetail implements OnInit {
     if (course) {
       this.router.navigate(['/courses', course.pkid, 'edit']);
     }
+  }
+
+  /**
+   * Download the course brochure PDF. The API renders published courses only and returns 404
+   * otherwise, so an unpublished course surfaces a friendly warning instead of a file.
+   */
+  protected downloadPdf(course: Course): void {
+    if (this.pdfDownloading()) {
+      return; // a download is already in flight
+    }
+    this.pdfDownloading.set(true);
+    this.service.downloadPdf(course.courseId).subscribe({
+      next: (blob) => {
+        saveBlob(blob, `${course.courseId}.pdf`);
+        this.pdfDownloading.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.pdfDownloading.set(false);
+        const detail = err.status === 404
+          ? '此課程尚未上架或不存在，無法匯出 PDF'
+          : '無法匯出 PDF，請稍後再試';
+        this.messages.add({ severity: 'warn', summary: '匯出失敗', detail });
+      },
+    });
   }
 
   /** Download the generated QR image as `{CourseId}.png`. */

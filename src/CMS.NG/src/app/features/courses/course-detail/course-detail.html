@@ -12,6 +12,11 @@
       }
       <button pButton type="button" label="返回" icon="pi pi-arrow-left"
               class="p-button-outlined p-button-secondary" (click)="back()"></button>
+      @if (course(); as c) {
+        <button pButton type="button" label="下載 PDF" icon="pi pi-file-pdf"
+                class="p-button-outlined" [disabled]="pdfDownloading()"
+                (click)="downloadPdf(c)"></button>
+      }
       <button pButton type="button" label="編輯" icon="pi pi-pencil" (click)="edit()"></button>
     </div>
   </div>
