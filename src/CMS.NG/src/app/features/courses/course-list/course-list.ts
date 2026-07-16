@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +19,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
 import { Course, CourseQuery, CourseRequest } from '@core/models/course.model';
+import { saveBlob } from '@core/utils/download';
 
 const FILTERS_KEY = 'course-list-filters';
 const SORT_KEY = 'course-list-sort';
@@ -82,6 +84,8 @@ export class CourseList implements OnInit {
   protected readonly courses = signal<Course[]>([]);
   protected readonly loading = signal(false);
   protected readonly filterVisible = signal(false);
+  /** pkid of the row whose PDF is currently downloading (blocks a re-click), or null. */
+  protected readonly pdfDownloading = signal<number | null>(null);
 
   // ----- inline (in-place) cell editing -----
   /** The cell currently in edit mode, or null when nothing is being edited. */
@@ -206,6 +210,30 @@ export class CourseList implements OnInit {
 
   protected edit(course: Course): void {
     this.router.navigate(['/courses', course.pkid, 'edit']);
+  }
+
+  /**
+   * Download the course brochure PDF. The API renders published courses only and returns 404
+   * otherwise, so an unpublished/unknown course surfaces a friendly warning instead of a file.
+   */
+  protected downloadPdf(course: Course): void {
+    if (this.pdfDownloading() !== null) {
+      return; // a download is already in flight
+    }
+    this.pdfDownloading.set(course.pkid);
+    this.service.downloadPdf(course.courseId).subscribe({
+      next: (blob) => {
+        saveBlob(blob, `${course.courseId}.pdf`);
+        this.pdfDownloading.set(null);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.pdfDownloading.set(null);
+        const detail = err.status === 404
+          ? '此課程尚未上架或不存在，無法匯出 PDF'
+          : '無法匯出 PDF，請稍後再試';
+        this.messages.add({ severity: 'warn', summary: '匯出失敗', detail });
+      },
+    });
   }
 
   // ----- inline editing -----
