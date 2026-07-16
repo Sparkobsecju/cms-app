@@ -1,8 +1,11 @@
 using CMS.API.Data;
 using CMS.API.Middleware;
 using CMS.API.Repositories;
+using CMS.API.Security;
 using CMS.API.Services;
 using Dapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +62,22 @@ builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
 // Login: mints signed JWT access tokens (stateless — no per-request state).
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
+// JWT bearer authentication. The validation key is resolved at runtime from
+// SysConfig['appConfig'].symmetricSecurityKey — the same key the AuthController signs with.
+builder.Services.AddSingleton<ISigningKeyProvider, SigningKeyProvider>();
+builder.Services.ConfigureOptions<ConfigureJwtBearerOptions>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+
+// Require an authenticated user for EVERY endpoint by default (fallback policy). AuthController
+// opts back out with [AllowAnonymous], so login stays reachable without a token.
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 var app = builder.Build();
 
 // First in the pipeline: catch any unhandled exception and return a safe 500.
@@ -72,6 +91,7 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseCors(CorsPolicy);
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -46,7 +46,6 @@ describe('errorInterceptor', () => {
     const arg = messages.add.calls.mostRecent().args[0];
     expect(arg.severity).toBe('error');
     expect(arg.detail).toBe('An unexpected error occurred.');
-    // A 500 must not touch the session.
     expect(auth.clearSession).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
@@ -61,7 +60,6 @@ describe('errorInterceptor', () => {
 
     expect(auth.clearSession).toHaveBeenCalledTimes(1);
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
-    // A 401 is not a 500-class toast.
     expect(messages.add).not.toHaveBeenCalled();
   });
 
@@ -76,5 +74,48 @@ describe('errorInterceptor', () => {
     expect(messages.add).not.toHaveBeenCalled();
     expect(auth.clearSession).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+});
+
+// A 401 must actually empty session storage — exercised end-to-end with the REAL AuthService.
+describe('errorInterceptor + real AuthService (session clearing)', () => {
+  const SESSION_KEY = 'cms.session';
+  let http: HttpClient;
+  let httpMock: HttpTestingController;
+  let router: jasmine.SpyObj<Router>;
+
+  beforeEach(() => {
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ userId: 'a', userName: 'A', accessToken: 'x.y.z' }),
+    );
+    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withFetch(), withInterceptors([errorInterceptor])),
+        provideHttpClientTesting(),
+        AuthService, // real service — clearSession() must remove the stored session
+        { provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['add']) },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    http = TestBed.inject(HttpClient);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    sessionStorage.clear();
+  });
+
+  it('empties session storage and navigates to /login on a 401', () => {
+    http.get('/api/secure').subscribe({ next: () => fail('should have errored'), error: () => {} });
+
+    httpMock.expectOne('/api/secure').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 });

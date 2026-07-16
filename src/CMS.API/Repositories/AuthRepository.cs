@@ -1,9 +1,8 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Security;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -49,6 +48,51 @@ public sealed class AuthRepository : IAuthRepository
         return await ReadSigningSecretAsync(connection, cancellationToken);
     }
 
+    public async Task<bool> UpdateUserNameAsync(string userId, string userName, CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+
+        // Only UserName is written; UserId, roles, IsActive and PasswordHash are untouched. This is a
+        // self-service action endpoint (like reset-password), so — consistent with AuthController — it is
+        // not row-audited.
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE AppUser SET UserName = @UserName WHERE UserId = @UserId;",
+            new { UserId = userId, UserName = userName }, cancellationToken: cancellationToken));
+
+        return affected > 0;
+    }
+
+    public async Task<bool> VerifyCurrentPasswordAsync(string userId, string currentPassword, CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+
+        // The hash is compared inside the WHERE clause and never selected out, so the stored PasswordHash
+        // never leaves the repository — the same discipline as ValidateCredentialsAsync.
+        var passwordHash = HashPassword(currentPassword);
+        var match = await connection.ExecuteScalarAsync<int?>(new CommandDefinition(
+            "SELECT 1 FROM AppUser WHERE UserId = @UserId AND PasswordHash = @PasswordHash;",
+            new { UserId = userId, PasswordHash = passwordHash }, cancellationToken: cancellationToken));
+
+        return match is not null;
+    }
+
+    public async Task<bool> ChangePasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+
+        // Hash the new plaintext here (it never leaves this method) and stamp PasswordUpdatedTime in the
+        // same UPDATE. Mirrors AppUserRepository.ResetPasswordAsync; a self-service action, so not audited.
+        var passwordHash = HashPassword(newPassword);
+        var affected = await connection.ExecuteAsync(new CommandDefinition(@"
+            UPDATE AppUser
+            SET PasswordHash = @PasswordHash,
+                PasswordUpdatedTime = GETDATE()
+            WHERE UserId = @UserId;",
+            new { UserId = userId, PasswordHash = passwordHash }, cancellationToken: cancellationToken));
+
+        return affected > 0;
+    }
+
     // Reads SysConfig['appConfig'].symmetricSecurityKey.
     private static async Task<string> ReadSigningSecretAsync(IDbConnection connection, CancellationToken cancellationToken)
     {
@@ -80,9 +124,5 @@ public sealed class AuthRepository : IAuthRepository
     }
 
     // SHA-256 hex, lower-case — the same scheme AppUserRepository uses when writing PasswordHash.
-    private static string HashPassword(string password)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
+    private static string HashPassword(string password) => PasswordHasher.Hash(password);
 }

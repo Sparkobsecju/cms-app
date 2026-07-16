@@ -13,7 +13,7 @@
     <nav class="layout-menu">
       <span class="menu-section">選單 MENU</span>
       <ul class="menu-list">
-        @for (group of navGroups(); track group.label) {
+        @for (group of visibleGroups(); track group.label) {
           <li class="menu-item">
             <button type="button" class="menu-link" (click)="toggleGroup(group)"
                     [class.active-group]="group.expanded && group.children.length">
@@ -45,6 +45,21 @@
         }
       </ul>
     </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info" title="{{ userName() }}">
+        <i class="pi pi-user"></i>
+        <span class="user-name">{{ userName() }}</span>
+      </div>
+      <a class="footer-link" routerLink="/profile" routerLinkActive="active">
+        <i class="pi pi-id-card"></i>
+        <span class="menu-text">個人資料 My Profile</span>
+      </a>
+      <button type="button" class="logout-btn" (click)="logout()" aria-label="登出 Logout">
+        <i class="pi pi-sign-out"></i>
+        <span class="menu-text">登出 Logout</span>
+      </button>
+    </div>
   </aside>
 
   <main class="layout-content">
