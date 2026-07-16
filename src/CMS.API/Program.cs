@@ -55,6 +55,7 @@ builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemReposi
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
 builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<ICoursePdfRepository, CoursePdfRepository>();
 
 // Cross-cutting audit writer; repositories will call it after Insert/Update/Delete.
 builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
