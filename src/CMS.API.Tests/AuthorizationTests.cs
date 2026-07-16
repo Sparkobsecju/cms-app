@@ -84,12 +84,80 @@ public class AuthorizationTests : IClassFixture<AuthorizationTests.AuthTestFacto
         Assert.False(string.IsNullOrWhiteSpace(body.AccessToken));
     }
 
+    [Fact]
+    public async Task UpdateProfile_UsesJwtUserId_IgnoringUserIdInBody()
+    {
+        var client = _factory.CreateClient();
+        // Token subject is "tester" (see IssueToken).
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", IssueToken());
+
+        // The body tries to smuggle a different UserId — it must be ignored; the JWT subject wins.
+        var response = await client.PutAsJsonAsync(
+            "/api/Auth/profile", new { userId = "attacker", userName = "Renamed" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ProfileResponse>();
+        Assert.NotNull(body);
+        Assert.Equal("tester", body!.UserId);
+
+        // The update targeted the token's user, never the id supplied in the body.
+        _factory.AuthRepository.Verify(
+            r => r.UpdateUserNameAsync("tester", "Renamed", It.IsAny<CancellationToken>()), Times.Once);
+        _factory.AuthRepository.Verify(
+            r => r.UpdateUserNameAsync("attacker", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_Returns401_WithoutBearerToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            "/api/Auth/profile", new { userName = "Renamed" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_Returns401_WithoutBearerToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/Auth/change-password",
+            new { currentPassword = "OldPass1!", newPassword = "NewPass9#", confirmPassword = "NewPass9#" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_UsesJwtUserId_AndPersistsForTokenSubject()
+    {
+        var client = _factory.CreateClient();
+        // Token subject is "tester" (see IssueToken).
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", IssueToken());
+
+        var response = await client.PostAsJsonAsync(
+            "/api/Auth/change-password",
+            new { currentPassword = "OldPass1!", newPassword = "NewPass9#", confirmPassword = "NewPass9#" });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        // The change targeted the token's user; the current-password check and the update both used "tester".
+        _factory.AuthRepository.Verify(
+            r => r.VerifyCurrentPasswordAsync("tester", "OldPass1!", It.IsAny<CancellationToken>()), Times.Once);
+        _factory.AuthRepository.Verify(
+            r => r.ChangePasswordAsync("tester", "NewPass9#", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     /// <summary>
     /// Boots the real app but replaces every DB-touching service used by these tests with a stub and
     /// pins the validation key, so the suite runs without SQL Server.
     /// </summary>
     public sealed class AuthTestFactory : WebApplicationFactory<Program>
     {
+        /// <summary>The stub auth repository, exposed so tests can assert which UserId an update targeted.</summary>
+        public Mock<IAuthRepository> AuthRepository { get; } = new();
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             // A dummy connection string keeps SqlConnectionFactory's ctor happy if it is ever resolved.
@@ -111,12 +179,17 @@ public class AuthorizationTests : IClassFixture<AuthorizationTests.AuthTestFacto
 
                 // Auth repository → stub so anonymous login succeeds and returns a token signed with Secret.
                 services.RemoveAll<IAuthRepository>();
-                var auth = new Mock<IAuthRepository>();
-                auth.Setup(r => r.ValidateCredentialsAsync("helen", "secret", It.IsAny<CancellationToken>()))
+                AuthRepository.Setup(r => r.ValidateCredentialsAsync("helen", "secret", It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new AuthenticatedUser { UserId = "helen", UserName = "Helen", RoleIds = { "Admin" } });
-                auth.Setup(r => r.GetSigningSecretAsync(It.IsAny<CancellationToken>()))
+                AuthRepository.Setup(r => r.GetSigningSecretAsync(It.IsAny<CancellationToken>()))
                     .ReturnsAsync(Secret);
-                services.AddScoped(_ => auth.Object);
+                AuthRepository.Setup(r => r.UpdateUserNameAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(true);
+                AuthRepository.Setup(r => r.VerifyCurrentPasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(true);
+                AuthRepository.Setup(r => r.ChangePasswordAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(true);
+                services.AddScoped(_ => AuthRepository.Object);
             });
         }
     }

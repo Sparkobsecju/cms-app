@@ -51,6 +51,10 @@
         <i class="pi pi-user"></i>
         <span class="user-name">{{ userName() }}</span>
       </div>
+      <a class="footer-link" routerLink="/profile" routerLinkActive="active">
+        <i class="pi pi-id-card"></i>
+        <span class="menu-text">個人資料 My Profile</span>
+      </a>
       <button type="button" class="logout-btn" (click)="logout()" aria-label="登出 Logout">
         <i class="pi pi-sign-out"></i>
         <span class="menu-text">登出 Logout</span>

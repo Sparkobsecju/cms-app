@@ -1,9 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
 using CMS.API.Controllers;
 using CMS.API.Models;
 using CMS.API.Repositories;
+using CMS.API.Security;
 using CMS.API.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -184,5 +187,183 @@ public class AuthControllerTests
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result.Result);
         var error = Assert.IsType<ErrorResponse>(unauthorized.Value);
         Assert.Equal("Invalid credentials.", error.Message);
+    }
+
+    // ----- Update profile (self-service UserName change) -----
+
+    // Puts a signed-in user on the controller by seeding the JWT UserId claim, as the auth pipeline would.
+    private void SignInAs(string userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(JwtTokenService.UserIdClaimType, userId) }, "TestAuth");
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) },
+        };
+    }
+
+    [Fact]
+    public async Task UpdateProfile_UpdatesUserName_ForJwtUser_AndTrims()
+    {
+        SignInAs("helen");
+        _repository.Setup(r => r.UpdateUserNameAsync("helen", "Helen Wu", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        // Leading/trailing whitespace is trimmed before it reaches the repository.
+        var result = await _controller.UpdateProfile(new UpdateProfileRequest { UserName = "  Helen Wu  " }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<ProfileResponse>(ok.Value);
+        Assert.Equal("helen", body.UserId);
+        Assert.Equal("Helen Wu", body.UserName);
+        _repository.Verify(r => r.UpdateUserNameAsync("helen", "Helen Wu", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_TargetsJwtUser_NotAnyBodySuppliedId()
+    {
+        // Even if the request DTO could carry another id, only the JWT subject ("helen") is ever used.
+        SignInAs("helen");
+        _repository.Setup(r => r.UpdateUserNameAsync("helen", "Renamed", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileRequest { UserName = "Renamed" }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var body = Assert.IsType<ProfileResponse>(ok.Value);
+        Assert.Equal("helen", body.UserId);
+        // The repository is only ever asked to update the JWT user, never some other account.
+        _repository.Verify(r => r.UpdateUserNameAsync("helen", "Renamed", It.IsAny<CancellationToken>()), Times.Once);
+        _repository.Verify(r => r.UpdateUserNameAsync(
+            It.Is<string>(id => id != "helen"), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateProfile_ReturnsBadRequest_ForBlankUserName_WithoutHittingRepository(string blank)
+    {
+        SignInAs("helen");
+
+        var result = await _controller.UpdateProfile(new UpdateProfileRequest { UserName = blank }, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var error = Assert.IsType<ErrorResponse>(badRequest.Value);
+        Assert.Equal("UserName is required.", error.Message);
+        _repository.Verify(r => r.UpdateUserNameAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ----- Change password (self-service) -----
+
+    private static ChangePasswordRequest ChangeRequest(
+        string current = "OldPass1!", string next = "NewPass9#", string? confirm = null) => new()
+        {
+            CurrentPassword = current,
+            NewPassword = next,
+            ConfirmPassword = confirm ?? next,
+        };
+
+    [Fact]
+    public async Task ChangePassword_ValidRequest_PersistsNewPasswordForJwtUser_AndReturnsNoContent()
+    {
+        SignInAs("helen");
+        _repository.Setup(r => r.VerifyCurrentPasswordAsync("helen", "OldPass1!", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+        _repository.Setup(r => r.ChangePasswordAsync("helen", "NewPass9#", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        var result = await _controller.ChangePassword(ChangeRequest(), CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        // The new password is persisted for the JWT user exactly once. ChangePasswordAsync is the method
+        // whose single UPDATE sets PasswordHash = SHA256(new) and stamps PasswordUpdatedTime = GETDATE().
+        _repository.Verify(r => r.ChangePasswordAsync("helen", "NewPass9#", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void ChangePassword_PersistedHashIsSha256HexOfNewPassword()
+    {
+        // The value ChangePasswordAsync writes is exactly SHA-256(new password), lower-case hex — proven by
+        // hashing a known string and comparing against the shared hasher the repository uses.
+        const string newPassword = "NewPass9#";
+        var expected = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(newPassword)))
+            .ToLowerInvariant();
+
+        Assert.Equal(expected, CMS.API.Security.PasswordHasher.Hash(newPassword));
+        Assert.Equal(64, expected.Length);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrentPassword_ChangesNothing()
+    {
+        SignInAs("helen");
+        // Current password does not match the stored hash.
+        _repository.Setup(r => r.VerifyCurrentPasswordAsync("helen", "wrong", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(false);
+
+        var result = await _controller.ChangePassword(ChangeRequest(current: "wrong"), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var error = Assert.IsType<ErrorResponse>(badRequest.Value);
+        Assert.Equal("目前密碼不正確。 Current password is incorrect.", error.Message);
+        // Nothing is changed when the current password is wrong.
+        _repository.Verify(r => r.ChangePasswordAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Ab1!")]        // 4 classes but too short (< 8)
+    [InlineData("aB1")]         // 3 classes but too short (< 8)
+    [InlineData("password")]    // length 8 but only 1 class (lower)
+    [InlineData("Password")]    // length 8 but only 2 classes (upper, lower)
+    [InlineData("PASSWORD123")] // only 2 classes (upper, digit)
+    [InlineData("12345678")]    // only 1 class (digit)
+    public async Task ChangePassword_RejectsPasswordsFailingComplexity_WithoutPersisting(string weak)
+    {
+        SignInAs("helen");
+        _repository.Setup(r => r.VerifyCurrentPasswordAsync("helen", "OldPass1!", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        var result = await _controller.ChangePassword(ChangeRequest(next: weak), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var error = Assert.IsType<ErrorResponse>(badRequest.Value);
+        Assert.Equal(PasswordPolicy.Requirement, error.Message);
+        _repository.Verify(r => r.ChangePasswordAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChangePassword_AcceptsThreeOfFourClassesAtMinLength()
+    {
+        // Exactly 8 chars, exactly 3 classes (upper, lower, digit; no symbol) — the policy's boundary.
+        SignInAs("helen");
+        _repository.Setup(r => r.VerifyCurrentPasswordAsync("helen", "OldPass1!", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+        _repository.Setup(r => r.ChangePasswordAsync("helen", "Abc12345", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        var result = await _controller.ChangePassword(ChangeRequest(next: "Abc12345"), CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        _repository.Verify(r => r.ChangePasswordAsync("helen", "Abc12345", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ChangePassword_NewAndConfirmMismatch_ChangesNothing()
+    {
+        SignInAs("helen");
+        _repository.Setup(r => r.VerifyCurrentPasswordAsync("helen", "OldPass1!", It.IsAny<CancellationToken>()))
+                   .ReturnsAsync(true);
+
+        var result = await _controller.ChangePassword(
+            ChangeRequest(next: "NewPass9#", confirm: "NewPass9$"), CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var error = Assert.IsType<ErrorResponse>(badRequest.Value);
+        Assert.Equal("兩次輸入的新密碼不一致。 New password and confirmation do not match.", error.Message);
+        _repository.Verify(r => r.ChangePasswordAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

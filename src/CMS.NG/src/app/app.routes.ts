@@ -140,6 +140,10 @@ export const routes: Routes = [
             (m) => m.FeaturedPromoItemList,
           ),
       },
+      {
+        path: 'profile',
+        loadComponent: () => import('@features/profile/profile').then((m) => m.Profile),
+      },
       { path: '**', redirectTo: 'app-roles' },
     ],
   },

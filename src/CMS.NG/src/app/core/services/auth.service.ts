@@ -10,6 +10,12 @@ export interface AuthProfile {
   accessToken: string;
 }
 
+/** The identity fields returned by the profile-update endpoint (no token). */
+export interface ProfileUpdate {
+  userId: string;
+  userName: string;
+}
+
 /** Session-storage key holding the JSON-serialised {@link AuthProfile}. */
 const SESSION_KEY = 'cms.session';
 
@@ -22,6 +28,8 @@ const SESSION_KEY = 'cms.session';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly loginUrl = `${environment.apiBaseUrl}/Auth/login`;
+  private readonly profileUrl = `${environment.apiBaseUrl}/Auth/profile`;
+  private readonly changePasswordUrl = `${environment.apiBaseUrl}/Auth/change-password`;
 
   private readonly _profile = signal<AuthProfile | null>(readSession());
 
@@ -54,6 +62,31 @@ export class AuthService {
     return this.http
       .post<AuthProfile>(this.loginUrl, { userId, password })
       .pipe(tap((profile) => this.setSession(profile)));
+  }
+
+  /**
+   * Updates the signed-in user's own display name via <c>PUT /api/Auth/profile</c>. The backend takes
+   * the target UserId from the JWT, so only the new name is sent. On success the stored profile (and thus
+   * the shell's userName + session storage) is refreshed with the returned name; the access token is kept.
+   */
+  updateUserName(userName: string): Observable<ProfileUpdate> {
+    return this.http.put<ProfileUpdate>(this.profileUrl, { userName }).pipe(
+      tap((updated) => {
+        const current = this._profile();
+        if (current) {
+          this.setSession({ ...current, userName: updated.userName });
+        }
+      }),
+    );
+  }
+
+  /**
+   * Changes the signed-in user's own password via <c>POST /api/Auth/change-password</c>. Only plaintext
+   * passwords are sent — never a hash — and the backend takes the target UserId from the JWT. The current
+   * session (token included) is left untouched on success; the caller surfaces the result to the user.
+   */
+  changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Observable<void> {
+    return this.http.post<void>(this.changePasswordUrl, { currentPassword, newPassword, confirmPassword });
   }
 
   /** Persists the session profile in session storage. */

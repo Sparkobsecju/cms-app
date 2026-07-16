@@ -95,7 +95,89 @@ Built by `JwtTokenService` (`Services/JwtTokenService.cs`, `IJwtTokenService`):
 | `POST` | `/api/Auth/login` | Body `LoginRequest`; `200` `LoginResponse` on success, `401` `ErrorResponse` otherwise |
 
 Route comes from `[Route("api/[controller]")]` on `AuthController` (controller name `Auth`
-→ `api/Auth`; routing is case-insensitive). No auth required to reach it (it *issues* tokens).
+→ `api/Auth`; routing is case-insensitive). No auth required to reach *login* (it *issues* tokens);
+`[AllowAnonymous]` sits on the `login` action only, so every other action requires a token.
+
+---
+
+## My Profile (self-service UserName update)
+
+Lets a signed-in user update **only their own** display name.
+
+| Method | Route | Notes |
+|--------|-------|-------|
+| `PUT` | `/api/Auth/profile` | `[Authorize]`; body `UpdateProfileRequest`; `200` `ProfileResponse`, `400` on blank name, `401` without a token |
+
+- **Identity from the token, never the body**: the target `UserId` is read from the JWT via
+  `User.FindFirstValue(JwtTokenService.UserIdClaimType)`. `UpdateProfileRequest` carries **only**
+  `UserName` (no `UserId` property), so a client can neither rename another account nor change roles.
+- **Validation**: `UserName` is trimmed; blank/whitespace → `400` `ErrorResponse("UserName is
+  required.")` **without** hitting the repo.
+- **Repo**: `IAuthRepository.UpdateUserNameAsync(userId, userName, ct)` → `UPDATE AppUser SET
+  UserName = @UserName WHERE UserId = @UserId`, returns `affected > 0` (`false` → controller `404`).
+  Touches only `UserName`; `UserId`, roles, `IsActive`, `PasswordHash` untouched.
+- **Not row-audited** — a self-service action endpoint (like `reset-password`), consistent with the
+  rest of `AuthController`/`AuthRepository` staying audit- and dependency-light.
+- **Models**: `Models/UpdateProfileRequest.cs` (`{ UserName }`), `Models/ProfileResponse.cs`
+  (`{ UserId, UserName }` — no token, no secrets).
+- **Note**: the JWT still carries the pre-change `UserName` until the next login, so `RowAudit`
+  attribution uses the old name until the token refreshes.
+- **Frontend**: `features/profile/` page (`/profile`, guarded) shows `UserId` + roles read-only and
+  an editable name; **Save** calls `AuthService.updateUserName(name)`, which `PUT`s `{ userName }`
+  and on success merges the returned name into the session profile (refreshes the shell `userName`
+  signal + session storage, **keeps the token**). Linked as 個人資料 My Profile in the sidebar footer.
+- **Tests**: `AuthControllerTests` (unit — updates for the JWT user + trims; targets the JWT user
+  not a body id; blank → `400` without the repo). `AuthorizationTests` (WebApplicationFactory —
+  a body-supplied `userId` is ignored end-to-end, update targets the token subject; `401` without a
+  token). Angular `profile.spec.ts`, `auth.service.spec.ts` (`updateUserName`), `app.spec.ts` (link).
+
+---
+
+## Change Password (self-service)
+
+Lets a signed-in user change **their own** password. Plaintext only crosses the wire; **no password
+hash is ever accepted from or returned to the client**.
+
+| Method | Route | Notes |
+|--------|-------|-------|
+| `POST` | `/api/Auth/change-password` | `[Authorize]`; body `ChangePasswordRequest`; `204` on success, `400` `ErrorResponse` on any validation failure, `401` without a token |
+
+- **Identity from the token, never the body**: the target `UserId` is read from the JWT via
+  `User.FindFirstValue(JwtTokenService.UserIdClaimType)`. `ChangePasswordRequest` carries only
+  `CurrentPassword` / `NewPassword` / `ConfirmPassword` (no `UserId`), so a client can only ever change
+  their own password.
+- **Order of checks** (any failure returns `400` and changes nothing):
+  1. **Current password** — `IAuthRepository.VerifyCurrentPasswordAsync` compares
+     `SHA256(currentPassword)` against the stored `PasswordHash` **in the SQL `WHERE`** (the hash is a
+     parameter, never selected — the stored hash never leaves the repo). Mismatch →
+     `400 "目前密碼不正確。 Current password is incorrect."`.
+  2. **Complexity** — `Security/PasswordPolicy.IsCompliant`: length ≥ 8 **and** ≥ 3 of the 4 classes
+     (uppercase / lowercase / digit / symbol; a "symbol" is any non-letter, non-digit char). Fail →
+     `400` with the exact bilingual `PasswordPolicy.Requirement` message.
+  3. **Match** — `NewPassword` must equal `ConfirmPassword` (ordinal). Fail →
+     `400 "兩次輸入的新密碼不一致。 New password and confirmation do not match."`.
+- **Persist** — `IAuthRepository.ChangePasswordAsync` runs a single `UPDATE AppUser SET PasswordHash =
+  @Hash, PasswordUpdatedTime = GETDATE() WHERE UserId = @UserId` where `@Hash = SHA256(newPassword)` hex
+  (hashed inside the repo). Mirrors `AppUserRepository.ResetPasswordAsync`. Returns `false` (→ `404`) if
+  no such user. **Not row-audited** — a self-service action like the UserName update.
+- **Hashing** — the SHA-256-hex scheme lives in one place, `Security/PasswordHasher.Hash`, reused by
+  `AuthRepository` (verify + change) so a computed hash always compares equal to a stored one.
+- **Models**: `Models/ChangePasswordRequest.cs` (`{ CurrentPassword, NewPassword, ConfirmPassword }` —
+  no hash, no `UserId`). Success returns `204 No Content` (no body → nothing to leak).
+- **Frontend**: a **Change Password** card (`features/profile/change-password/`) on the `/profile` page.
+  A reactive form (current / new / confirm) mirrors the server policy client-side —
+  `passwordComplexityValidator` (length ≥ 8 + ≥ 3 classes, showing the same bilingual message) and a
+  group-level `passwordsMatchValidator`; the button stays disabled-in-effect until valid.
+  `AuthService.changePassword` posts the three plaintext fields and **keeps the session/token untouched**
+  on success (a success toast; the form resets). A server `400` message is surfaced inline. The server
+  remains authoritative — client validation is only a convenience.
+- **Tests**: `AuthControllerTests` (unit — valid change persists for the JWT user and returns `204`;
+  wrong current password changes nothing; complexity rejects length < 8 and < 3 classes and accepts the
+  3-of-4 boundary; new/confirm mismatch rejected; `PasswordHasher.Hash` == SHA-256 hex of the new
+  password). `AuthorizationTests` (WebApplicationFactory — `401` without a token; a valid request targets
+  the token subject end-to-end). Angular `change-password.spec.ts` (the two validators + form validity +
+  submit gating + inline server error) and `auth.service.spec.ts` (`changePassword` sends only plaintext,
+  keeps the token).
 
 ---
 
@@ -192,13 +274,23 @@ Run: `dotnet test src/CMS.API.Tests/CMS.API.Tests.csproj` (no DB required).
 ## Files Created / Modified
 
 **Created (CMS.API)**: `Models/LoginRequest.cs`, `Models/LoginResponse.cs`,
-`Models/AuthenticatedUser.cs`, `Repositories/IAuthRepository.cs`, `Repositories/AuthRepository.cs`,
-`Services/IJwtTokenService.cs`, `Services/JwtTokenService.cs`, `Controllers/AuthController.cs`.
+`Models/AuthenticatedUser.cs`, `Models/UpdateProfileRequest.cs`, `Models/ProfileResponse.cs`,
+`Models/ChangePasswordRequest.cs`, `Repositories/IAuthRepository.cs`, `Repositories/AuthRepository.cs`,
+`Services/IJwtTokenService.cs`, `Services/JwtTokenService.cs`, `Controllers/AuthController.cs`,
+`Security/PasswordPolicy.cs`, `Security/PasswordHasher.cs`.
+
+**Created (CMS.NG)**: `features/profile/profile.{ts,html,scss,spec.ts}`,
+`features/profile/change-password/change-password.{ts,html,scss,spec.ts}`.
 
 **Modified (CMS.API)**: `Program.cs` (DI for `IAuthRepository` + `IJwtTokenService`),
-`CMS.API.csproj` (`System.IdentityModel.Tokens.Jwt` 8.16.0).
+`CMS.API.csproj` (`System.IdentityModel.Tokens.Jwt` 8.16.0). `AuthController` later gained the
+`[Authorize]` `PUT /profile` action (and `[AllowAnonymous]` moved onto the `login` action).
 
-**Tests**: `CMS.API.Tests/AuthControllerTests.cs`.
+**Modified (CMS.NG)**: `core/services/auth.service.ts` (`updateUserName`), `app.routes.ts`
+(`/profile` route), `app.html` + `app.scss` (My Profile footer link).
+
+**Tests**: `CMS.API.Tests/AuthControllerTests.cs`, `CMS.API.Tests/AuthorizationTests.cs`;
+`CMS.NG` `profile.spec.ts`, `auth.service.spec.ts`, `app.spec.ts`.
 
 ---
 
@@ -211,8 +303,9 @@ Run: `dotnet test src/CMS.API.Tests/CMS.API.Tests.csproj` (no DB required).
   `ValidateIssuer/Audience = false`, `ValidateLifetime = true`, `MapInboundClaims = false`,
   `NameClaimType = "UserName"`, `RoleClaimType = ClaimTypes.Role`.
 - **Global policy** — `AddAuthorization` sets a **fallback policy** of `RequireAuthenticatedUser()`,
-  so every endpoint needs a valid bearer token except `AuthController`, which carries
-  `[AllowAnonymous]`. `app.UseAuthentication()` precedes `app.UseAuthorization()`. Tests:
+  so every endpoint needs a valid bearer token except the `[AllowAnonymous]` **`login` action** (the
+  attribute sits on the action, not the controller, so every other `AuthController` action — e.g.
+  `profile` below — still requires a token). `app.UseAuthentication()` precedes `app.UseAuthorization()`. Tests:
   `AuthorizationTests` (WebApplicationFactory) — protected endpoint 401 without / 401 invalid / 200
   with a valid token; `/api/Auth/login` reachable anonymously.
 - **Frontend** — real `/login` page posts to `POST /api/Auth/login`; `AuthService` stores the

@@ -76,6 +76,47 @@ describe('AuthService', () => {
     expect(service.hasRole('Admin')).toBeTrue();
   });
 
+  it('updateUserName PUTs only the name and refreshes the stored profile, keeping the token', () => {
+    const token = makeJwt({ UserName: 'Helen', [ROLE_URI]: ['Admin'] });
+    service.setSession({ userId: 'helen', userName: 'Helen', accessToken: token });
+
+    service.updateUserName('Helen Wu').subscribe();
+
+    const req = http.expectOne(`${environment.apiBaseUrl}/Auth/profile`);
+    expect(req.request.method).toBe('PUT');
+    // Only the new name is sent — the UserId is taken from the JWT by the backend.
+    expect(req.request.body).toEqual({ userName: 'Helen Wu' });
+    req.flush({ userId: 'helen', userName: 'Helen Wu' });
+
+    // Shell name + session storage refresh; the access token is preserved.
+    expect(service.userName()).toBe('Helen Wu');
+    expect(service.token).toBe(token);
+    const stored = JSON.parse(sessionStorage.getItem(SESSION_KEY)!);
+    expect(stored).toEqual({ userId: 'helen', userName: 'Helen Wu', accessToken: token });
+  });
+
+  it('changePassword POSTs only the plaintext fields (never a hash) and keeps the session', () => {
+    const token = makeJwt({ UserName: 'Helen', [ROLE_URI]: ['Admin'] });
+    service.setSession({ userId: 'helen', userName: 'Helen', accessToken: token });
+
+    service.changePassword('OldPass1!', 'NewPass9#', 'NewPass9#').subscribe();
+
+    const req = http.expectOne(`${environment.apiBaseUrl}/Auth/change-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      currentPassword: 'OldPass1!',
+      newPassword: 'NewPass9#',
+      confirmPassword: 'NewPass9#',
+    });
+    // No password hash is ever sent from the client.
+    expect(JSON.stringify(req.request.body)).not.toContain('hash');
+    req.flush(null);
+
+    // The session (and token) is untouched by a password change.
+    expect(service.token).toBe(token);
+    expect(service.userName()).toBe('Helen');
+  });
+
   it('clearSession removes the profile from session storage', () => {
     service.setSession({ userId: 'a', userName: 'A', accessToken: makeJwt({}) });
     expect(sessionStorage.getItem(SESSION_KEY)).not.toBeNull();

@@ -62,6 +62,14 @@ describe('App', () => {
     expect(el.textContent).toContain('Helen Wu');
   });
 
+  it('shows a My Profile link pointing at /profile', async () => {
+    const fixture = await createApp(authStub());
+    fixture.detectChanges();
+    const link = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.footer-link');
+    expect(link?.textContent).toContain('個人資料 My Profile');
+    expect(link?.getAttribute('href')).toContain('/profile');
+  });
+
   it('logout clears the session and navigates to /login', async () => {
     const clearSession = jasmine.createSpy('clearSession');
     const fixture = await createApp(authStub({ clearSession }));
