@@ -39,4 +39,12 @@ export class CourseService {
   delete(pkid: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${pkid}`);
   }
+
+  /**
+   * GET the rendered brochure PDF for a course, keyed by its CourseId business key (簡介代碼).
+   * The API only renders published courses; it returns 404 for unpublished or unknown ids.
+   */
+  downloadPdf(courseId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${encodeURIComponent(courseId)}/pdf`, { responseType: 'blob' });
+  }
 }

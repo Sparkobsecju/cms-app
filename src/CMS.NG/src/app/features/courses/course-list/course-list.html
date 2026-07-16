@@ -85,7 +85,7 @@
           <th pSortableColumn="listPrice" style="width: 7rem">定價 <p-sortIcon field="listPrice" /></th>
           <th pSortableColumn="learningCredit" style="width: 6rem">點數 <p-sortIcon field="learningCredit" /></th>
           <th pSortableColumn="canRepeat" style="width: 7rem">允許重聽 <p-sortIcon field="canRepeat" /></th>
-          <th style="width: 10rem">操作</th>
+          <th style="width: 12rem">操作</th>
         </tr>
       </ng-template>
 
@@ -200,6 +200,9 @@
 
           <td>
             <div class="row-actions">
+              <button pButton type="button" icon="pi pi-file-pdf" class="p-button-text p-button-rounded"
+                      pTooltip="下載 PDF" [disabled]="pdfDownloading() === course.pkid"
+                      (click)="downloadPdf(course)"></button>
               <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-rounded"
                       pTooltip="檢視" (click)="view(course)"></button>
               <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-rounded"
