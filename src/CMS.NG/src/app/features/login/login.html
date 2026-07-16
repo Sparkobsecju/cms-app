@@ -1,0 +1,41 @@
+<div class="login-page">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()">
+    <h1>登入 Login</h1>
+    <p class="text-muted">請輸入帳號與密碼登入系統。 Sign in to continue.</p>
+
+    @if (errorMessage()) {
+      <div class="error-banner" role="alert">{{ errorMessage() }}</div>
+    }
+
+    <div class="field">
+      <label for="userId">帳號 UserId</label>
+      <input
+        pInputText
+        id="userId"
+        type="text"
+        formControlName="userId"
+        autocomplete="username"
+        [class.invalid]="isInvalid('userId')"
+      />
+    </div>
+
+    <div class="field">
+      <label for="password">密碼 Password</label>
+      <input
+        pInputText
+        id="password"
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        [class.invalid]="isInvalid('password')"
+      />
+    </div>
+
+    <p-button
+      type="submit"
+      label="登入 Login"
+      styleClass="login-submit"
+      [loading]="submitting()"
+    />
+  </form>
+</div>

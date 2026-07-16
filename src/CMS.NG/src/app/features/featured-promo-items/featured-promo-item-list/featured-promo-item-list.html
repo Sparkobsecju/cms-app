@@ -1,0 +1,74 @@
+<div class="promo-page">
+  <!-- Training-center tabs (label = Name, value = pkid) -->
+  <div class="center-tabs" role="tablist">
+    @for (c of centers(); track c.pkid) {
+      <button type="button" class="center-tab" role="tab"
+              [class.active]="c.pkid === activeCenterPkid()"
+              [attr.aria-selected]="c.pkid === activeCenterPkid()"
+              (click)="selectCenter(c.pkid)">
+        {{ c.name }}
+      </button>
+    }
+  </div>
+
+  <!-- One-week (Mon–Sun) navigator -->
+  <div class="week-nav">
+    <button type="button" class="link-btn" (click)="prevWeek()" aria-label="上一週">&lt;&lt;--</button>
+    <span class="week-range">{{ weekRangeLabel() }}</span>
+    <button type="button" class="link-btn" (click)="nextWeek()" aria-label="下一週">--&gt;&gt;</button>
+  </div>
+
+  <!-- Day × slot grid -->
+  <div class="week-grid">
+    @for (day of days(); track day.iso) {
+      <section class="day-block">
+        <header class="day-header">{{ day.label }}</header>
+
+        @for (slot of slots; track slot) {
+          <div class="slot-row" [class.editing]="isEditing(day.iso, slot)">
+            @if (isEditing(day.iso, slot)) {
+              <span class="slot-no">{{ slot }}</span>
+              <div class="slot-form">
+                <app-featured-promo-item-form
+                  [item]="editing()!.item"
+                  [seed]="editing()!.seed"
+                  [promotions]="promotions()"
+                  [scheduleOn]="day.iso"
+                  [trainingCenterPkid]="activeCenterPkid()!"
+                  [slot]="slot"
+                  (saved)="onSaved($event)"
+                  (cancelled)="cancelEdit()" />
+              </div>
+            } @else {
+              <span class="slot-no">{{ slot }}</span>
+
+              @if (itemAt(day.iso, slot); as item) {
+                <span class="row-actions">
+                  <button type="button" class="link-btn" [disabled]="slot >= 3"
+                          (click)="move(item, 'down')" pTooltip="下移版位" aria-label="下移">+</button>
+                  <button type="button" class="link-btn" [disabled]="slot <= 1"
+                          (click)="move(item, 'up')" pTooltip="上移版位" aria-label="上移">--</button>
+                  <button type="button" class="link-btn" (click)="startEdit(day.iso, slot)">Edit</button>
+                  <button type="button" class="link-btn" (click)="copy(item)">Copy</button>
+                  <button type="button" class="link-btn danger" (click)="confirmDelete(item)">Delete</button>
+                </span>
+                <input pInputText class="cell promo-code" type="text" readonly [value]="item.promoCode" />
+                <input pInputText class="cell topic" type="text" readonly [value]="item.topic" />
+                <input pInputText class="cell description" type="text" readonly [value]="item.description" />
+              } @else {
+                <span class="row-actions">
+                  <button type="button" class="link-btn" (click)="startEdit(day.iso, slot)">Edit</button>
+                  <button type="button" class="link-btn" [disabled]="!clipboard()"
+                          (click)="startPaste(day.iso, slot)">Paste</button>
+                </span>
+                <input pInputText class="cell promo-code empty" type="text" readonly value="" />
+                <input pInputText class="cell topic empty" type="text" readonly value="" />
+                <input pInputText class="cell description empty" type="text" readonly value="" />
+              }
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+</div>

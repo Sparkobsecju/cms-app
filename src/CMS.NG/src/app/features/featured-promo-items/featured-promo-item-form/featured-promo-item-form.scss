@@ -1,0 +1,49 @@
+.promo-form {
+  border: 2px solid var(--p-content-border-color, #000);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  background: var(--p-content-background, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    label {
+      font-size: 0.85rem;
+      color: var(--p-text-muted-color, #555);
+    }
+
+    input {
+      width: 100%;
+    }
+  }
+
+  .field-inline {
+    input {
+      max-width: 480px;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: 1.5rem;
+    padding-top: 0.25rem;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--p-primary-color, #2563eb);
+    cursor: pointer;
+    font-size: 0.9rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

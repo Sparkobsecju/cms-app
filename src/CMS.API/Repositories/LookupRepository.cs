@@ -22,4 +22,80 @@ public sealed class LookupRepository : ILookupRepository
             cancellationToken: cancellationToken));
         return rows.AsList();
     }
+
+    public async Task<IReadOnlyList<AppRoleLookup>> GetAppRolesAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<AppRoleLookup>(new CommandDefinition(
+            "SELECT RoleId, RoleName FROM AppRole ORDER BY RoleName ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<PublishStatusLookup>> GetPublishStatusesAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<PublishStatusLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Description FROM PublishStatus ORDER BY pkid ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<CourseGroupLookup>> GetCourseGroupsAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<CourseGroupLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Description FROM CourseGroup ORDER BY pkid ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<PartnerLookup>> GetPartnersAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<PartnerLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Name FROM Partner ORDER BY DisplayOrder ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<CertificationLookup>> GetCertificationsAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        // Title is nchar(100) → RTRIM; JOIN Partner for a disambiguated label.
+        var rows = await connection.QueryAsync<CertificationLookup>(new CommandDefinition(
+            @"SELECT ce.pkid AS Pkid, p.Name AS PartnerName, RTRIM(ce.Title) AS Title
+              FROM Certification ce
+              JOIN Partner p ON p.pkid = ce.Partner_pkid
+              ORDER BY p.Name ASC, ce.Title ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<JobCategoryLookup>> GetJobCategoriesAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<JobCategoryLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Description FROM JobCategory ORDER BY Description ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<TrainingCenterLookup>> GetTrainingCentersAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<TrainingCenterLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, Name FROM TrainingCenter ORDER BY DisplayOrder ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<PromotionLookup>> GetPromotionsAsync(CancellationToken cancellationToken = default)
+    {
+        using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<PromotionLookup>(new CommandDefinition(
+            "SELECT pkid AS Pkid, PromoCode, Topic, Description FROM Promotion2 ORDER BY PromoCode ASC;",
+            cancellationToken: cancellationToken));
+        return rows.AsList();
+    }
 }

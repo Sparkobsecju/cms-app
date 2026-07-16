@@ -1,0 +1,7 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .full-width {
+  width: 100%;
+}

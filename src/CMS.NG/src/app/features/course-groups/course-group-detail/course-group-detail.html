@@ -1,0 +1,34 @@
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>檢視課程群組</h1>
+      @if (group(); as g) {
+        <span class="subtitle">主代碼 {{ g.pkid }}</span>
+      }
+    </div>
+    <div class="page-actions">
+      @if (group(); as g) {
+        <app-row-audit-badge tableName="CourseGroup" [pkid]="g.pkid" />
+      }
+      <button pButton type="button" label="返回" icon="pi pi-arrow-left"
+              class="p-button-outlined p-button-secondary" (click)="back()"></button>
+      <button pButton type="button" label="編輯" icon="pi pi-pencil" (click)="edit()"></button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card text-muted">載入中…</div>
+  } @else if (group(); as g) {
+    <div class="card">
+      <h2 class="card-title">課程群組資料</h2>
+      <dl class="detail-grid">
+        <dt>主代碼</dt>
+        <dd>{{ g.pkid }}</dd>
+        <dt>群組名稱</dt>
+        <dd>{{ g.description }}</dd>
+      </dl>
+    </div>
+  } @else {
+    <div class="card text-muted">查無此課程群組</div>
+  }
+</div>

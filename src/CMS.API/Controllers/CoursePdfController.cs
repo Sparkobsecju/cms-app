@@ -1,5 +1,9 @@
 using CMS.API.Pdf;
 using CMS.API.Repositories;
+<<<<<<< HEAD
+=======
+using Microsoft.AspNetCore.Authorization;
+>>>>>>> origin/main
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
@@ -9,6 +13,12 @@ namespace CMS.API.Controllers;
 /// PDF (課程 PDF). Only published courses are served; anything else returns 404
 /// so unpublished catalogue content can't be discovered by id-guessing.
 /// </summary>
+<<<<<<< HEAD
+=======
+// Opt out of the global fallback policy (auth required on every endpoint):
+// this is consumed anonymously by public-site students.
+[AllowAnonymous]
+>>>>>>> origin/main
 [ApiController]
 [Route("api/courses")]
 public sealed class CoursePdfController : ControllerBase

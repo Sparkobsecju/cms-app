@@ -1,0 +1,45 @@
+<div class="profile-page">
+  <div class="page-header">
+    <h1>個人資料 My Profile</h1>
+    <p class="text-muted">檢視您的帳號與角色，並可修改顯示名稱。 View your account and roles; edit your display name.</p>
+  </div>
+
+  <form class="card" [formGroup]="form" (ngSubmit)="save()">
+    <div class="field">
+      <label for="userId">帳號 UserId</label>
+      <div class="readonly-value" id="userId" data-testid="user-id">{{ userId() }}</div>
+    </div>
+
+    <div class="field">
+      <label for="userName">使用者名稱 UserName</label>
+      <input
+        pInputText
+        id="userName"
+        type="text"
+        formControlName="userName"
+        autocomplete="name"
+        [class.invalid]="isInvalid('userName')"
+      />
+      @if (isInvalid('userName')) {
+        <small class="error-text" role="alert">請輸入使用者名稱 UserName is required.</small>
+      }
+    </div>
+
+    <div class="field">
+      <label>角色 Roles</label>
+      @if (roles().length) {
+        <div class="roles" data-testid="roles">
+          @for (role of roles(); track role) {
+            <span class="role-chip">{{ role }}</span>
+          }
+        </div>
+      } @else {
+        <div class="readonly-value text-muted" data-testid="roles">— 無 None</div>
+      }
+    </div>
+
+    <p-button type="submit" label="儲存 Save" styleClass="profile-submit" [loading]="submitting()" />
+  </form>
+
+  <app-change-password />
+</div>
