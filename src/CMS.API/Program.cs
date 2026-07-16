@@ -53,9 +53,6 @@ builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
-<<<<<<< HEAD
-builder.Services.AddScoped<ICoursePdfRepository, CoursePdfRepository>();
-=======
 builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<ICoursePdfRepository, CoursePdfRepository>();
@@ -81,7 +78,6 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
->>>>>>> origin/main
 
 var app = builder.Build();
 
