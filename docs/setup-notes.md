@@ -56,6 +56,15 @@ re-anchors the newest to today+30 with no drift):
 sqlcmd -S ".\SQLEXPRESS" -d CMS -E -C -i database/refresh-promo-dates.sql
 ```
 
+## Dev login seed
+
+The authenticated path needs a real `AppUser`. Dev-only login `Admin` / password `Admin`
+(`IsActive=1`, `Admin` role → 系統管理 menu) is seeded in the local `CMS` DB — **not** in
+`database/*.sql`. Recreate via upsert into `AppUser` (`PasswordHash` = lowercase-hex SHA-256 of
+the password — the same scheme `AuthRepository` uses) plus a row in `AppUserRole('Admin','Admin')`.
+Note: **Change Password** rejects `Admin` as a *new* password (needs ≥8 chars, 3-of-4 classes), so
+a rotated dev password looks like `Admin+-*/`.
+
 ## Backend detail
 
 - `IDbConnectionFactory` opens `SqlConnection` from connection string `CMS` (`appsettings.json`).

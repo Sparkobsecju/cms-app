@@ -314,3 +314,16 @@ Run: `dotnet test src/CMS.API.Tests/CMS.API.Tests.csproj` (no DB required).
   `/login`) redirects to `/login` when signed out; a 401 clears the session and redirects (error
   interceptor); the shell shows the signed-in name + logout and gates the 系統管理 Admin menu on the
   `Admin` role. Specs cover each of these.
+
+---
+
+## Smoke-test status & known issues
+
+- **Browser-smoke-tested** on :4200 against the live API: guard redirects (`/` and protected routes →
+  `/login`), invalid creds → generic banner with no session stored, Admin group hidden when signed out,
+  and the cross-origin `POST /api/Auth/login` 401 reaches the browser (CORS intact).
+- **Not yet smoke-tested**: the authenticated success path (valid login → session/username/logout,
+  Admin visible) — needs a real active `AppUser` credential; don't read it from the DB.
+- **Known issue**: `/login` renders *inside* the app shell (root `App` always paints the sidebar +
+  Logout around `<router-outlet>`), so a signed-out visitor sees app nav and a Logout button on the
+  login page. Fix by moving the sidebar into a layout route that wraps only the guarded routes.
