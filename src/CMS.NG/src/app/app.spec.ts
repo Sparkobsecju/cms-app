@@ -55,6 +55,22 @@ describe('App', () => {
     expect(el.textContent).not.toContain('角色 AppRole');
   });
 
+  // Regression: QA-ISSUE-001 — placeholder nav groups with no wired-up children
+  // (說明會 Seminar, 活動管理 Promotion, 線上報名 Forms, 網站資訊 WebInfo, 考試中心 TestingCenter)
+  // were rendering as clickable menu items that went nowhere. They must not render.
+  // Found by /qa on 2026-07-17. Report: qa/qa-report-localhost-2026-07-17.md
+  it('hides placeholder nav groups that have no children', async () => {
+    const fixture = await createApp(authStub({ hasRole: () => true }));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    for (const placeholder of ['說明會 Seminar', '活動管理 Promotion', '線上報名 Forms', '網站資訊 WebInfo', '考試中心 TestingCenter']) {
+      expect(el.textContent).not.toContain(placeholder);
+    }
+    // Groups that do have children still render.
+    expect(el.textContent).toContain('課程管理 Course');
+    expect(el.textContent).toContain('首頁管理 Home');
+  });
+
   it('shows the signed-in user name in the shell', async () => {
     const fixture = await createApp(authStub({ userName: signal('Helen Wu') }));
     fixture.detectChanges();
