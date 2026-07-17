@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { FormGroup } from '@angular/forms';
@@ -37,7 +38,10 @@ describe('ChangePassword', () => {
   }
 
   beforeEach(() => {
-    auth = jasmine.createSpyObj<AuthService>('AuthService', ['changePassword']);
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['changePassword'], {
+      // The hidden username field reads the signed-in UserId from the profile signal.
+      profile: signal({ userId: 'helen', userName: 'Helen', accessToken: 't' }),
+    });
     messageService = jasmine.createSpyObj<MessageService>('MessageService', ['add']);
   });
 
@@ -149,5 +153,19 @@ describe('ChangePassword', () => {
   it('exposes the bilingual complexity message shown in the UI', () => {
     expect(PASSWORD_COMPLEXITY_MESSAGE).toContain('至少');
     expect(PASSWORD_COMPLEXITY_MESSAGE).toContain('uppercase / lowercase / digit / symbol');
+  });
+
+  // Regression: QA-ISSUE-003 — the change-password form had password fields but no username field,
+  // which browsers flag ("password forms should have a username field for accessibility") and which
+  // stops password managers associating the new credential. A hidden username field bound to the
+  // signed-in UserId must be present. Found by /qa on 2026-07-17.
+  // Report: qa/qa-report-localhost-2026-07-17.md
+  it('includes a hidden username field carrying the signed-in UserId for accessibility', async () => {
+    const el = (await createComponent()).nativeElement as HTMLElement;
+    const username = el.querySelector<HTMLInputElement>('input[autocomplete="username"]');
+    expect(username).withContext('hidden username input is present').not.toBeNull();
+    expect(username!.value).toBe('helen');
+    // Must be rendered (off-screen), not display:none, so managers/a11y still see it.
+    expect(getComputedStyle(username!).display).not.toBe('none');
   });
 });

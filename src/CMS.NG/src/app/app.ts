@@ -73,9 +73,14 @@ export class App {
     },
   ]);
 
-  // Hide admin-only groups (系統管理 Admin) unless the signed-in user holds the Admin role.
+  // Hide admin-only groups (系統管理 Admin) unless the signed-in user holds the Admin role, and hide
+  // placeholder groups that have no wired-up children (說明會 Seminar, 活動管理 Promotion, 線上報名 Forms,
+  // 網站資訊 WebInfo, 考試中心 TestingCenter) so they don't render as clickable menu items that go nowhere.
+  // When a group gains real children it reappears automatically.
   protected readonly visibleGroups = computed(() =>
-    this.navGroups().filter((group) => !group.adminOnly || this.auth.hasRole('Admin')),
+    this.navGroups().filter(
+      (group) => group.children.length > 0 && (!group.adminOnly || this.auth.hasRole('Admin')),
+    ),
   );
 
   protected toggleCollapsed(): void {

@@ -1,0 +1,39 @@
+{
+  "date": "2026-07-17",
+  "url": "http://localhost:4200/",
+  "branch": "docs/course-pdf-and-claude-reorg",
+  "healthScore": 97,
+  "tier": "full",
+  "featuresTested": [
+    "app-roles", "app-users", "publish-statuses",
+    "course-groups", "partners", "courses",
+    "featured-promo-items", "profile",
+    "login", "logout", "auth-guard", "role-guard",
+    "course-pdf-export", "search-filter", "audit-trail", "crud-cycle"
+  ],
+  "issues": [
+    { "id": "ISSUE-001", "title": "Dead menu placeholders (Seminar/Promotion/Forms/WebInfo/TestingCenter)", "severity": "low", "category": "ux", "status": "fixed", "commit": "b293a3e" },
+    { "id": "ISSUE-002", "title": "PublishStatus 主代碼 out-of-range input silently clamped (999 to 255)", "severity": "low", "category": "data-integrity", "status": "fixed", "commit": "6a0c9b4" },
+    { "id": "ISSUE-003", "title": "Change-password form missing username field for a11y/password-manager", "severity": "low", "category": "accessibility", "status": "fixed", "commit": "620e689" }
+  ],
+  "preExistingFailures": {
+    "courseDetailSpecs": 6,
+    "note": "6 CourseDetail unit tests fail on develop, unrelated to these fixes"
+  },
+  "categoryScores": {
+    "console": 100,
+    "links": 100,
+    "visual": 100,
+    "functional": 97,
+    "ux": 89,
+    "performance": 100,
+    "content": 100,
+    "accessibility": 97
+  },
+  "security": {
+    "authGuard": "pass",
+    "roleGuardClient": "pass",
+    "roleGuardApi403": "pass",
+    "notes": "Defence-in-depth confirmed: menu filter + client route guard + API 403"
+  }
+}
