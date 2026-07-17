@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -71,6 +71,10 @@ export class ChangePassword {
   protected readonly submitting = signal(false);
   /** Error returned by the server (e.g. wrong current password), shown inline. Cleared on edit/submit. */
   protected readonly serverError = signal('');
+
+  /** The signed-in UserId, bound to a hidden username field so password managers can associate the
+   * credential (and to satisfy the accessibility guidance that password forms carry a username field). */
+  protected readonly userId = computed(() => this.auth.profile()?.userId ?? '');
 
   protected readonly complexityMessage = PASSWORD_COMPLEXITY_MESSAGE;
 
