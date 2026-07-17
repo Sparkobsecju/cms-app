@@ -4,16 +4,15 @@ Full-stack CMS, code-generated from `database/*.sql`. Stack: `CMS.API` (.NET 9, 
 `CMS.API.Tests` (xUnit+Moq), `CMS.NG` (Angular 20 + PrimeNG, :4200); solution `src/CMS.slnx`.
 
 ## Always-needed
-- **Commands**: `dotnet build|test CMS.slnx`, `dotnet run --project CMS.API` (Swagger `/swagger`);
-  in `src/CMS.NG`: `npm start`, `npx ng test --watch=false --browsers=ChromeHeadless`, `npx ng build`.
-  Start the API before `ng serve`; backend tests need no DB, e2e needs `CMS` on `.\SQLEXPRESS`.
-- **Dev login**: `Admin` / `Admin` (rotated dev pwd: `Admin+-*/`) → 系統管理 menu.
-- **Web browsing**: use the `/browse` skill for *all* web browsing — **never** `mcp__claude-in-chrome__*`.
+- **Build/test**: `dotnet build|test CMS.slnx`; in `src/CMS.NG`, `npx ng test --watch=false --browsers=ChromeHeadless`.
+  Backend tests need no DB. Run/serve, e2e DB, full command reference → [setup-notes](docs/setup-notes.md).
+- **Dev login**: `Admin` / `Admin` (rotated dev pwd `Admin+-*/`) → 系統管理 menu.
+- **Web browsing**: `/browse` skill only — **never** `mcp__claude-in-chrome__*`.
 
-## Sometimes-needed — read the match before the task → [docs/reference-index.md](docs/reference-index.md)
+## Task-specific — read the match before starting → [docs/reference-index.md](docs/reference-index.md)
 - Add/change a feature → `docs/conventions.md`
 - Auth / JWT / role authz / My Profile / Change Password → `spec/auth/Auth.md`
 - Course PDF export → `spec/course/CoursePdf.md`
 - Setup / layout / commands / DB data & date refresh / dev login seed → `docs/setup-notes.md`
-- Code review findings + what's fixed vs. open → `docs/reviews/` (fix log: `2026-07-17-fixes-applied.md`)
-- What gstack learned on this project → `docs/learnings.md`
+- Code review findings + fixed vs. open → `docs/reviews/` (fix log: `2026-07-17-fixes-applied.md`)
+- What gstack learned here → `docs/learnings.md`
