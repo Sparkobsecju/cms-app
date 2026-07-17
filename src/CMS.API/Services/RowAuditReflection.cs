@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace CMS.API.Services;
@@ -13,14 +14,21 @@ public static class RowAuditReflection
     /// <summary>Maximum length of the ActionDesc column (dbo.RowAudit.ActionDesc varchar(1000)).</summary>
     public const int ActionDescMaxLength = 1000;
 
+    /// <summary>Per-type cache of the ordered property set — reflection metadata is immutable.</summary>
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> OrderedPropertyCache = new();
+
     /// <summary>
     /// Public, readable, non-indexer instance properties in declaration order. Reflection does
     /// not guarantee ordering, so we sort by metadata token, which reflects declaration order.
+    /// The result is cached per type so each insert/update/delete doesn't re-run the reflection
+    /// scan and LINQ sort (~60 calls for a wide entity).
     /// </summary>
-    private static IEnumerable<PropertyInfo> OrderedProperties(Type type) =>
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
-            .OrderBy(p => p.MetadataToken);
+    private static PropertyInfo[] OrderedProperties(Type type) =>
+        OrderedPropertyCache.GetOrAdd(type, static t =>
+            t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                .OrderBy(p => p.MetadataToken)
+                .ToArray());
 
     /// <summary>
     /// Reads the entity's pkid (case-insensitive property name "pkid") as a string.

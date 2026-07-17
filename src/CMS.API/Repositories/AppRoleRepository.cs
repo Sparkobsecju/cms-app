@@ -44,14 +44,14 @@ public sealed class AppRoleRepository : IAppRoleRepository
             SELECT {SelectColumns}
             FROM AppRole r
             WHERE (@Keyword IS NULL
-                   OR r.RoleId LIKE '%' + @Keyword + '%'
-                   OR r.RoleName LIKE '%' + @Keyword + '%'
-                   OR r.Description LIKE '%' + @Keyword + '%')
+                   OR r.RoleId LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR r.RoleName LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR r.Description LIKE '%' + @Keyword + '%' ESCAPE '\')
               AND (@PermissionLevel IS NULL OR r.PermissionLevel = @PermissionLevel)
             ORDER BY r.RoleId ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
             query.PermissionLevel,
         };
         var rows = await connection.QueryAsync<AppRole>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));

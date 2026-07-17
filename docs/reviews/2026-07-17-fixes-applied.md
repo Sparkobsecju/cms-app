@@ -79,6 +79,62 @@
 
 ---
 
+## ✅ Fixed — Pass 2 (2026-07-17, hardening batch)
+
+> Second remediation pass over the **still-open, self-contained** findings — no schema change, no
+> load test, no large harness. Backend `dotnet build` → 0/0; `dotnet test` → **183 passed** (was
+> 168, +15 new). Frontend `ng test` → **205 passed**, `ng build` → clean.
+
+### Backend
+
+12. **JWT issuer/audience now emitted + validated** — §4.1 (confidence 10/10).
+    `JwtTokenService` emits `iss`/`aud` (constants `JwtTokenService.Issuer`/`.Audience` = `CMS.API`);
+    `ConfigureJwtBearerOptions` sets `ValidateIssuer`/`ValidateAudience` = true with matching
+    `ValidIssuer`/`ValidAudience`. A token signed with the same key but minted for another service
+    (wrong `iss`) is now rejected. *Files: `Services/JwtTokenService.cs`, `Security/ConfigureJwtBearerOptions.cs`.*
+    New test: `ProtectedEndpoint_Returns401_ForTokenWithWrongIssuer` (`AuthorizationTests.cs`).
+
+13. **Minimum signing-key length enforced (≥32 bytes)** — §4.1 (confidence 6/10).
+    `SigningKeyProvider` (new `MinKeyBytes = 32`) throws if the configured key is shorter than a
+    256-bit HMAC-SHA256 key — fail-closed rather than sign with a brute-forceable key.
+    *File: `Services/SigningKeyProvider.cs`.*
+
+14. **LIKE wildcard escaping on every keyword filter** — §4.2 (confidence 7/10).
+    New `SqlLike.EscapeWildcards` escapes `%`/`_`/`[`/`\` before binding; each keyword `LIKE` carries
+    `ESCAPE '\'`. A search for `%` now matches the literal character, not every row (correctness /
+    index-scan-DoS annoyance). *Files: `Data/SqlLike.cs` (new) + `Course`/`AppRole`/`AppUser`/`CourseGroup`/`Partner`/`PublishStatus` repositories.*
+    New test: `SqlLikeTests.cs`.
+
+15. **`SqlConnectionFactory` disposes the connection if `OpenAsync` throws** — §4.2 (confidence 6/10).
+    A transient-fault/cancelled open no longer leaks a half-built connection out of the pool.
+    *File: `Data/SqlConnectionFactory.cs`.*
+
+16. **`RowAuditReflection` caches the ordered `PropertyInfo[]` per type** — §4.2 (confidence 6/10).
+    `ConcurrentDictionary<Type, PropertyInfo[]>` replaces the per-operation `GetProperties` + LINQ
+    sort, so audit no longer re-reflects on every insert/update/delete. *File: `Services/RowAuditReflection.cs`.*
+
+17. **Request DTO validation attributes** — §4.4 (confidence 7/10).
+    Added `[Required]`/`[MaxLength]`/`[Range]` matching the SQL column definitions to
+    `Course`/`FeaturedPromoItem`/`CourseGroup`/`PublishStatus`/`AppRole`/`AppUser` request models
+    (matching the pattern `PartnerRequest` already used). Oversized/negative input is now rejected as
+    **400** at the `[ApiController]` boundary instead of surfacing as a **500** from the DB.
+    *Files: the six `*Request.cs` models in `Models/`.*
+
+### Frontend
+
+18. **Error interceptor no longer leaks the raw 5xx server message** — §4.5 (confidence 5/10).
+    A 500-class response now always shows a fixed generic toast; the server `message` (which can carry
+    SQL/stack fragments) is only re-thrown, never displayed. *File: `core/interceptors/error.interceptor.ts`;
+    spec updated to assert the raw message is not surfaced (`error.interceptor.spec.ts`).*
+
+### Tests added (closes part of the §4.6 gap)
+
+19. **`SigningKeyProvider` now has execution-level tests** — §4.6 (P1, was "no").
+    SQLite-backed `SigningKeyProviderTests.cs`: valid-secret load, cache-once, short-key rejection,
+    missing-row/missing-property/empty-secret error paths.
+
+---
+
 ## ⛔ Remaining — pick these up next (ranked)
 
 ### P1 still open (each needs a schema/DB change, a load test, or a large test harness — deliberately deferred)
@@ -96,26 +152,23 @@
 - **SQL repository test gap** (§4.6) — 10 of 12 repos have no execution-level tests. Add SQLite-backed
   tests mirroring `PublishStatusRepositoryAuditTests`. Prioritize `AuthRepository` (password SQL,
   `IsActive=1`, hash-never-projected) and `CoursePdfRepository` (published-only gate).
-- **JWT validation tests** (§4.6) — wrong-key-signed → 401, past-expiry → 401 (backend integration).
-- **`SigningKeyProvider` tests** (§4.6) — JSON extraction valid/missing/empty + cache-once.
+- **JWT validation tests** (§4.6) — *partially done in Pass 2:* wrong-issuer → 401 is now covered.
+  Still open: wrong-key-signed → 401, past-expiry → 401 (backend integration).
+- ~~**`SigningKeyProvider` tests** (§4.6)~~ — **done in Pass 2** (`SigningKeyProviderTests.cs`).
 - **`FeaturedPromoItemRepository.MoveSlotAsync` swap tests** (§4.6).
 
 ### P2 still open (hardening / hygiene)
 
 - Pagination on all list endpoints (§4.2/§4.4) — `OFFSET/FETCH` + count, or `TOP (@Max)` cap.
-- Request DTO validation attributes (`[StringLength]`/`[Range]`/`[Required]`) so bad input → 400 not 500 (§4.4).
 - Map unique/FK `SqlException` (2601/2627/547) → 409/400 for Courses/Partners/FeaturedPromo/CourseGroups (§4.4).
-- Issuer/audience emission + validation; per-environment signing key; min key length ≥32 bytes (§4.1).
+- **Per-environment signing key** (§4.1) — *issuer/audience validation + min key length ≥32 bytes done in Pass 2;*
+  a per-environment (not shared) key is still a deployment concern to resolve when the target is known.
 - Rate limiting / lockout on `/api/Auth/login` (§4.1).
 - Shorter access token + refresh/revocation; security-stamp invalidation on password change (§4.1).
 - Gate CORS loopback policy to Development; explicit prod origin allow-list; security headers
   (X-Content-Type-Options, etc.) (§4.4).
-- LIKE wildcard escaping in keyword filters (§4.2).
-- `SqlConnectionFactory`: dispose connection if `OpenAsync` throws (§4.2).
-- `RowAuditReflection`: cache `PropertyInfo[]` per type (§4.2, low priority).
 - Cap rich-text field length before PDF render; consider streaming (§4.3).
 - Prefer static Noto `-Regular`/`-Bold` fonts over the VF (§4.3).
-- Error interceptor: prefer generic message for 5xx instead of raw server `message` (§4.5).
 - JWT-in-sessionStorage → httpOnly+Secure+SameSite cookie (§4.5, architectural) + CSP.
 - **`environment.ts` production URL** (§4.5) — still `http://localhost:5000/api`.
   *Deferred deliberately:* the real deployment origin is unknown; guessing a `https://…` host would be

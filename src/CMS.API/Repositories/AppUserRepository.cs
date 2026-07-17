@@ -48,13 +48,13 @@ public sealed class AppUserRepository : IAppUserRepository
             SELECT {SelectColumns}
             FROM AppUser u
             WHERE (@Keyword IS NULL
-                   OR u.UserId LIKE '%' + @Keyword + '%'
-                   OR u.UserName LIKE '%' + @Keyword + '%')
+                   OR u.UserId LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR u.UserName LIKE '%' + @Keyword + '%' ESCAPE '\')
               AND (@IsActive IS NULL OR u.IsActive = @IsActive)
             ORDER BY u.UserId ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
             query.IsActive,
         };
         var rows = await connection.QueryAsync<AppUser>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
