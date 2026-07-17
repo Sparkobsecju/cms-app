@@ -1,9 +1,8 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Security;
 using CMS.API.Services;
 using Dapper;
 
@@ -48,13 +47,13 @@ public sealed class AppUserRepository : IAppUserRepository
             SELECT {SelectColumns}
             FROM AppUser u
             WHERE (@Keyword IS NULL
-                   OR u.UserId LIKE '%' + @Keyword + '%'
-                   OR u.UserName LIKE '%' + @Keyword + '%')
+                   OR u.UserId LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR u.UserName LIKE '%' + @Keyword + '%' ESCAPE '\')
               AND (@IsActive IS NULL OR u.IsActive = @IsActive)
             ORDER BY u.UserId ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
             query.IsActive,
         };
         var rows = await connection.QueryAsync<AppUser>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
@@ -239,8 +238,10 @@ public sealed class AppUserRepository : IAppUserRepository
             throw new InvalidOperationException("SysConfig 'appConfig'.defaultPassword is empty.");
         }
 
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(defaultPassword));
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        // Hash with the shared PBKDF2 scheme (salted, per-call random salt) — the same scheme login and
+        // change-password verify against. Two users created/reset to the same default therefore get
+        // distinct stored hashes.
+        return PasswordHasher.Hash(defaultPassword);
     }
 
     // N-N sync: delete-then-reinsert the AppUserRole rows for this user.

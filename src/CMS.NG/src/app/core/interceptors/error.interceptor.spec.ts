@@ -34,18 +34,20 @@ describe('errorInterceptor', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('shows a friendly toast on a 500 using the safe message from the body', () => {
+  it('shows a fixed generic toast on a 500 and does NOT leak the raw server message', () => {
     http.get('/api/boom').subscribe({ next: () => fail('should have errored'), error: () => {} });
 
     httpMock.expectOne('/api/boom').flush(
-      { message: 'An unexpected error occurred.' },
+      { message: 'SqlException: violation of PRIMARY KEY at dbo.Course line 42' },
       { status: 500, statusText: 'Internal Server Error' },
     );
 
     expect(messages.add).toHaveBeenCalledTimes(1);
     const arg = messages.add.calls.mostRecent().args[0];
     expect(arg.severity).toBe('error');
-    expect(arg.detail).toBe('An unexpected error occurred.');
+    // The internal server message must never reach the user; a fixed generic message is shown.
+    expect(arg.detail).toBe('發生未預期的錯誤，請稍後再試。 An unexpected error occurred.');
+    expect(arg.detail).not.toContain('SqlException');
     expect(auth.clearSession).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });

@@ -15,6 +15,13 @@ public sealed class JwtTokenService : IJwtTokenService
     /// <summary>Access tokens are valid for 24 hours from issue.</summary>
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(24);
 
+    /// <summary>Token issuer (<c>iss</c>) — emitted and validated so tokens minted for another
+    /// service that happens to share the signing key are rejected.</summary>
+    public const string Issuer = "CMS.API";
+
+    /// <summary>Token audience (<c>aud</c>) — emitted and validated alongside the issuer.</summary>
+    public const string Audience = "CMS.API";
+
     /// <summary>Claim type carrying the user's <c>UserId</c>.</summary>
     public const string UserIdClaimType = "UserId";
 
@@ -43,6 +50,8 @@ public sealed class JwtTokenService : IJwtTokenService
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
+            issuer: Issuer,
+            audience: Audience,
             claims: claims,
             notBefore: now,
             expires: expires,

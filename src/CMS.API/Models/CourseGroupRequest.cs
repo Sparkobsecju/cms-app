@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CMS.API.Models;
 
 /// <summary>Write DTO for creating/updating a <see cref="CourseGroup"/>.</summary>
@@ -7,5 +9,7 @@ public class CourseGroupRequest
     public short Pkid { get; set; }
 
     /// <summary>Group name (群組名稱).</summary>
+    [Required]
+    [MaxLength(100)]
     public string Description { get; set; } = string.Empty;
 }

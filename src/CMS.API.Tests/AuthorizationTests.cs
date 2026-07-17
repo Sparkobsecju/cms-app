@@ -33,6 +33,23 @@ public class AuthorizationTests : IClassFixture<AuthorizationTests.AuthTestFacto
     private static string IssueToken(params string[] roles) =>
         new JwtTokenService().CreateAccessToken("tester", "Tester", roles, Secret).Token;
 
+    // Builds a token signed with the correct key but carrying a foreign issuer — used to prove
+    // issuer validation rejects tokens minted for a different service that shares the key.
+    private static string IssueTokenWithIssuer(string issuer)
+    {
+        var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret)),
+            Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+        var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: issuer,
+            audience: JwtTokenService.Audience,
+            claims: [new System.Security.Claims.Claim(JwtTokenService.UserNameClaimType, "Tester")],
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: creds);
+        return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     [Fact]
     public async Task ProtectedEndpoint_Returns401_WithoutBearerToken()
     {
@@ -79,6 +96,19 @@ public class AuthorizationTests : IClassFixture<AuthorizationTests.AuthTestFacto
 
         // Authenticated but not authorized: role gate must reject with 403, not admit with 200.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedEndpoint_Returns401_ForTokenWithWrongIssuer()
+    {
+        var client = _factory.CreateClient();
+        // Correctly signed and unexpired, but issued by a different service (wrong `iss`).
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IssueTokenWithIssuer("some-other-service"));
+
+        var response = await client.GetAsync("/api/publishstatuses");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

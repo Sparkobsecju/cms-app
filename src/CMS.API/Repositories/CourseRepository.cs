@@ -71,11 +71,11 @@ public sealed class CourseRepository : ICourseRepository
             SELECT {SelectColumns}
             {FromJoins}
             WHERE (@Keyword IS NULL
-                   OR c.Title LIKE '%' + @Keyword + '%'
-                   OR c.OfficialTitle LIKE '%' + @Keyword + '%'
-                   OR c.CourseId LIKE '%' + @Keyword + '%'
-                   OR c.ProdCourseId LIKE '%' + @Keyword + '%'
-                   OR c.FriendlyUrl LIKE '%' + @Keyword + '%')
+                   OR c.Title LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR c.OfficialTitle LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR c.CourseId LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR c.ProdCourseId LIKE '%' + @Keyword + '%' ESCAPE '\'
+                   OR c.FriendlyUrl LIKE '%' + @Keyword + '%' ESCAPE '\')
               AND (@PartnerPkid IS NULL OR c.Partner_pkid = @PartnerPkid)
               AND (@CourseGroupPkid IS NULL OR c.CourseGroup_pkid = @CourseGroupPkid)
               AND (@PublishStatusPkid IS NULL OR c.PublishStatus_pkid = @PublishStatusPkid)
@@ -87,7 +87,7 @@ public sealed class CourseRepository : ICourseRepository
             ORDER BY c.DisplayOrder ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
             query.PartnerPkid,
             query.CourseGroupPkid,
             query.PublishStatusPkid,

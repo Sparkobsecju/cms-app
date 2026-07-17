@@ -281,17 +281,35 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public void ChangePassword_PersistedHashIsSha256HexOfNewPassword()
+    public void PasswordHasher_ProducesSaltedPbkdf2_ThatRoundTrips()
     {
-        // The value ChangePasswordAsync writes is exactly SHA-256(new password), lower-case hex — proven by
-        // hashing a known string and comparing against the shared hasher the repository uses.
-        const string newPassword = "NewPass9#";
-        var expected = Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(newPassword)))
+        // New hashes are PBKDF2 (salted, non-deterministic): two hashes of the same password differ, but
+        // each verifies, and a wrong password does not. needsRehash is false for a current-format hash.
+        const string password = "NewPass9#";
+
+        var hashA = CMS.API.Security.PasswordHasher.Hash(password);
+        var hashB = CMS.API.Security.PasswordHasher.Hash(password);
+
+        Assert.StartsWith("PBKDF2$SHA256$", hashA);
+        Assert.NotEqual(hashA, hashB); // random per-call salt
+        Assert.True(CMS.API.Security.PasswordHasher.Verify(password, hashA, out var needsRehashA));
+        Assert.False(needsRehashA);
+        Assert.False(CMS.API.Security.PasswordHasher.Verify("WrongPass9#", hashA, out _));
+    }
+
+    [Fact]
+    public void PasswordHasher_VerifiesDeprecatedSha256Hash_AndFlagsForRehash()
+    {
+        // Deprecated unsalted SHA-256 hex hashes (written by earlier versions) still verify, and Verify
+        // signals needsRehash so the login path can upgrade the row to PBKDF2 transparently.
+        const string password = "NewPass9#";
+        var legacyHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(password)))
             .ToLowerInvariant();
 
-        Assert.Equal(expected, CMS.API.Security.PasswordHasher.Hash(newPassword));
-        Assert.Equal(64, expected.Length);
+        Assert.True(CMS.API.Security.PasswordHasher.Verify(password, legacyHash, out var needsRehash));
+        Assert.True(needsRehash);
+        Assert.False(CMS.API.Security.PasswordHasher.Verify("WrongPass9#", legacyHash, out _));
     }
 
     [Fact]

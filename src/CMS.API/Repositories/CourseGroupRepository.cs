@@ -39,11 +39,11 @@ public sealed class CourseGroupRepository : ICourseGroupRepository
         var sql = $@"
             SELECT {SelectColumns}
             FROM CourseGroup g
-            WHERE (@Keyword IS NULL OR g.Description LIKE '%' + @Keyword + '%')
+            WHERE (@Keyword IS NULL OR g.Description LIKE '%' + @Keyword + '%' ESCAPE '\')
             ORDER BY g.pkid DESC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
         };
         var rows = await connection.QueryAsync<CourseGroup>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
         return rows.AsList();

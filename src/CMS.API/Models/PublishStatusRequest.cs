@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CMS.API.Models;
 
 /// <summary>Write DTO for creating/updating a <see cref="PublishStatus"/>.</summary>
@@ -7,6 +9,8 @@ public class PublishStatusRequest
     public byte Pkid { get; set; }
 
     /// <summary>Status description (狀態說明).</summary>
+    [Required]
+    [MaxLength(50)]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>Whether this status represents a draft (草稿).</summary>

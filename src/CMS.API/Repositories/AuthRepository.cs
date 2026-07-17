@@ -21,25 +21,47 @@ public sealed class AuthRepository : IAuthRepository
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
-        // All three checks live in the WHERE clause so a failure of any one returns no row — the caller
-        // can't tell which part failed. PasswordHash is compared, never projected out.
-        var passwordHash = HashPassword(password);
-        var user = await connection.QuerySingleOrDefaultAsync<AuthenticatedUser>(new CommandDefinition(@"
-            SELECT UserId AS UserId, UserName AS UserName
+        // Fetch the stored hash for an active user. Verification happens in-process because PBKDF2 hashes are
+        // salted and cannot be compared in SQL. PasswordHash is read into this method only and never leaves
+        // it (it is not on AuthenticatedUser and never reaches the client). A missing row — unknown user OR
+        // IsActive = 0 — is indistinguishable to the caller from a wrong password: both return null.
+        var record = await connection.QuerySingleOrDefaultAsync<CredentialRecord>(new CommandDefinition(@"
+            SELECT UserId AS UserId, UserName AS UserName, PasswordHash AS PasswordHash
             FROM AppUser
-            WHERE UserId = @UserId AND IsActive = 1 AND PasswordHash = @PasswordHash;",
-            new { UserId = userId, PasswordHash = passwordHash }, cancellationToken: cancellationToken));
+            WHERE UserId = @UserId AND IsActive = 1;",
+            new { UserId = userId }, cancellationToken: cancellationToken));
 
-        if (user is null)
+        if (record is null || !PasswordHasher.Verify(password, record.PasswordHash, out var needsRehash))
         {
             return null;
         }
 
+        // Lazy migration: the stored hash used the deprecated unsalted SHA-256 scheme. We now hold the
+        // verified plaintext, so re-hash it under PBKDF2 and persist — upgrading the weak hash without
+        // forcing a password reset. PasswordUpdatedTime is deliberately NOT stamped: the password itself
+        // did not change, only its storage format.
+        if (needsRehash)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "UPDATE AppUser SET PasswordHash = @PasswordHash WHERE UserId = @UserId;",
+                new { UserId = record.UserId, PasswordHash = PasswordHasher.Hash(password) },
+                cancellationToken: cancellationToken));
+        }
+
+        var user = new AuthenticatedUser { UserId = record.UserId, UserName = record.UserName };
         var roles = await connection.QueryAsync<string>(new CommandDefinition(
             "SELECT RoleId FROM AppUserRole WHERE UserId = @UserId ORDER BY RoleId;",
             new { user.UserId }, cancellationToken: cancellationToken));
         user.RoleIds = roles.AsList();
         return user;
+    }
+
+    // Backend-only projection carrying PasswordHash for in-process verification. Never returned to callers.
+    private sealed class CredentialRecord
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string? PasswordHash { get; set; }
     }
 
     public async Task<string> GetSigningSecretAsync(CancellationToken cancellationToken = default)
@@ -66,14 +88,14 @@ public sealed class AuthRepository : IAuthRepository
     {
         using var connection = await _connectionFactory.CreateOpenConnectionAsync(cancellationToken);
 
-        // The hash is compared inside the WHERE clause and never selected out, so the stored PasswordHash
-        // never leaves the repository — the same discipline as ValidateCredentialsAsync.
-        var passwordHash = HashPassword(currentPassword);
-        var match = await connection.ExecuteScalarAsync<int?>(new CommandDefinition(
-            "SELECT 1 FROM AppUser WHERE UserId = @UserId AND PasswordHash = @PasswordHash;",
-            new { UserId = userId, PasswordHash = passwordHash }, cancellationToken: cancellationToken));
+        // Read the stored hash into this method only (never projected to the client) and verify in-process,
+        // since PBKDF2 hashes are salted and cannot be compared in SQL. Deprecated SHA-256 hashes still
+        // verify here; no rehash is done because the very next step (ChangePasswordAsync) rewrites the hash.
+        var storedHash = await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "SELECT PasswordHash FROM AppUser WHERE UserId = @UserId;",
+            new { UserId = userId }, cancellationToken: cancellationToken));
 
-        return match is not null;
+        return PasswordHasher.Verify(currentPassword, storedHash, out _);
     }
 
     public async Task<bool> ChangePasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default)
