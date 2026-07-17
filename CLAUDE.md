@@ -12,6 +12,8 @@ Full-stack CMS, code-generated from `database/*.sql`. Stack: `CMS.API` (.NET 9, 
 
 ## Sometimes-needed — read the match before the task → [docs/reference-index.md](docs/reference-index.md)
 - Add/change a feature → `docs/conventions.md`
-- Auth / JWT / My Profile / Change Password → `spec/auth/Auth.md`
+- Auth / JWT / role authz / My Profile / Change Password → `spec/auth/Auth.md`
 - Course PDF export → `spec/course/CoursePdf.md`
 - Setup / layout / commands / DB data & date refresh / dev login seed → `docs/setup-notes.md`
+- Code review findings + what's fixed vs. open → `docs/reviews/` (fix log: `2026-07-17-fixes-applied.md`)
+- What gstack learned on this project → `docs/learnings.md`
