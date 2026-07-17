@@ -76,6 +76,33 @@ describe('PublishStatusForm', () => {
     expect(nav).toHaveBeenCalledWith(['/publish-statuses', 3]);
   });
 
+  // Regression: QA-ISSUE-002 — 主代碼 (a 0–255 byte code) used to be silently clamped by the input
+  // (e.g. 999 → 255) with no validation feedback. An out-of-range value must now fail validation and
+  // block the submit. Found by /qa on 2026-07-17. Report: qa/qa-report-localhost-2026-07-17.md
+  it('rejects an out-of-range 主代碼 (> 255) instead of submitting', () => {
+    const { component, service } = setup(null);
+    component['form'].patchValue({ pkid: 999, description: 'Too big', isDraft: true });
+    component['save']();
+    expect(service.create).not.toHaveBeenCalled();
+    expect(component['form'].controls.pkid.hasError('max')).toBeTrue();
+  });
+
+  it('rejects a negative 主代碼 (< 0) instead of submitting', () => {
+    const { component, service } = setup(null);
+    component['form'].patchValue({ pkid: -1, description: 'Negative', isDraft: true });
+    component['save']();
+    expect(service.create).not.toHaveBeenCalled();
+    expect(component['form'].controls.pkid.hasError('min')).toBeTrue();
+  });
+
+  it('accepts an in-range 主代碼 (0–255)', () => {
+    const { component, service } = setup(null);
+    component['form'].patchValue({ pkid: 200, description: 'In range', isDraft: true });
+    component['save']();
+    expect(service.create).toHaveBeenCalled();
+    expect(service.create.calls.mostRecent().args[0].pkid).toBe(200);
+  });
+
   it('calls update in edit mode', () => {
     const { component, service } = setup('1');
     component['save']();

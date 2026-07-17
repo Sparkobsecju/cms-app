@@ -23,9 +23,15 @@
       <div class="field">
         <label for="pkid">主代碼 <span class="required">*</span></label>
         <p-inputNumber inputId="pkid" formControlName="pkid" [useGrouping]="false"
-                       [min]="0" [max]="255" styleClass="full-width" placeholder="請輸入主代碼 (0–255)" />
+                       styleClass="full-width" placeholder="請輸入主代碼 (0–255)" />
         @if (isInvalid('pkid')) {
-          <div class="field-error">請輸入主代碼</div>
+          <div class="field-error">
+            @if (form.get('pkid')?.hasError('required')) {
+              請輸入主代碼
+            } @else {
+              主代碼須介於 0 到 255 之間
+            }
+          </div>
         }
       </div>
 
