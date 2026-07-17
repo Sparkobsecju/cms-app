@@ -10,9 +10,6 @@ namespace CMS.API.Controllers;
 /// PDF (課程 PDF). Only published courses are served; anything else returns 404
 /// so unpublished catalogue content can't be discovered by id-guessing.
 /// </summary>
-// Opt out of the global fallback policy (auth required on every endpoint):
-// this is consumed anonymously by public-site students.
-[AllowAnonymous]
 [ApiController]
 [Route("api/courses")]
 public sealed class CoursePdfController : ControllerBase
@@ -26,6 +23,9 @@ public sealed class CoursePdfController : ControllerBase
 
     /// <summary>Returns the published course as a PDF attachment, or 404.</summary>
     // String business key: no ":int" route constraint.
+    // [AllowAnonymous] scoped to this single action (consumed anonymously by public-site students) so a
+    // future action added to this controller doesn't silently inherit anonymous access.
+    [AllowAnonymous]
     [HttpGet("{courseId}/pdf")]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -39,6 +39,8 @@ public sealed class CoursePdfController : ControllerBase
         }
 
         var bytes = CoursePdfDocument.Render(course);
-        return File(bytes, "application/pdf", $"{courseId}.pdf");
+        // Name the file from the canonical DB CourseId, not the un-canonicalized route value, so a
+        // case-insensitive match still yields the spec's filename={CourseId}.pdf.
+        return File(bytes, "application/pdf", $"{course.CourseId}.pdf");
     }
 }

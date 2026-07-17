@@ -1,6 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { MessageService } from 'primeng/api';
 import { RowAuditService } from '@core/services/row-audit.service';
 import { of } from 'rxjs';
 import { CourseDetail } from './course-detail';
@@ -43,6 +44,7 @@ describe('CourseDetail', () => {
       providers: [
         provideRouter([]),
         provideNoopAnimations(),
+        MessageService,
         { provide: RowAuditService, useValue: { history: () => of([]) } },
         { provide: CourseService, useValue: service },
         { provide: LookupService, useValue: lookups },

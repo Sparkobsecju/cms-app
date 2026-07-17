@@ -69,6 +69,19 @@ public class AuthorizationTests : IClassFixture<AuthorizationTests.AuthTestFacto
     }
 
     [Fact]
+    public async Task AdminEndpoint_Returns403_ForAuthenticatedNonAdmin()
+    {
+        var client = _factory.CreateClient();
+        // A valid, authenticated token — but carrying no Admin role.
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", IssueToken("Editor"));
+
+        var response = await client.GetAsync("/api/publishstatuses");
+
+        // Authenticated but not authorized: role gate must reject with 403, not admit with 200.
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task AuthLogin_IsAnonymous_AndReturnsToken_WithoutBearerToken()
     {
         var client = _factory.CreateClient();
