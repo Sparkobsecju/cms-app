@@ -17,6 +17,8 @@ and the Angular admin routes are wrapped in `roleGuard('Admin')` (`core/guards/r
 the sidebar 系統管理 filter is UX-only. Seed role id `Admin` (via `AppUserRole('Admin','Admin')`);
 dev login `Admin`/`Admin` holds it. Auth guard also rejects expired JWTs (fail-closed), and the
 HTTP interceptor attaches the bearer token only to same-origin API requests.
+**Passwords**: salted PBKDF2 (`Security/PasswordHasher.cs`); legacy unsalted SHA-256 hashes still
+verify and are auto-migrated on next login. Verify in code, **not SQL** — hashes are salted.
 
 ## Course PDF export
 [spec/course/CoursePdf.md](../spec/course/CoursePdf.md) — full feature spec. Design
@@ -41,9 +43,14 @@ deferred item without its context. Update the log each remediation pass.
 ## Cautionary code samples — "don't code like this"
 [sampleDevise/](sampleDevise/README.md) — a teaching archive of real defects found here, each with the
 before/after code, the **concrete attack scenario** that makes the pattern dangerous, and a one-line rule.
-Read before writing security-sensitive code. First entry:
+Read before writing security-sensitive code. Per-framework catalogues for Web Forms / MVC 5 /
+ASP.NET Core; each doc has a `.zh-TW.md` 繁體中文 translation alongside it. First entry:
 [01 — unsalted SHA-256 password hashing](sampleDevise/01-password-hashing-unsalted-sha256.md) (why a fast
 hash is wrong for passwords, why salted hashes can't be compared in SQL, and safe lazy migration).
+
+## What the app / UI looks like
+[screenshots/](screenshots/) — 12 captioned shots incl. a role-gated view; embedded in the root
+[README](../README.md) Screenshots section.
 
 ## Project learnings (cross-session)
 [learnings.md](learnings.md) — patterns/pitfalls gstack captured (Course PDF is backend-only,

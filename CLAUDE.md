@@ -9,15 +9,14 @@ Full-stack CMS, code-generated from `database/*.sql`. Stack: `CMS.API` (.NET 9, 
 - **Dev login**: `Admin` / `Admin` (rotated dev pwd `Admin+-*/`) → 系統管理 menu.
 - **Web browsing**: `/browse` skill only — **never** `mcp__claude-in-chrome__*`.
 
-## Task-specific — read the match before starting → [docs/reference-index.md](docs/reference-index.md)
-- Add/change a feature → `docs/conventions.md`
-- Auth / JWT / role authz / My Profile / Change Password → `spec/auth/Auth.md`.
-  Passwords: **salted PBKDF2** (`Security/PasswordHasher.cs`); legacy unsalted SHA-256 hashes still
-  verify and are auto-migrated on next login. Verify in code, not SQL (hashes are salted).
-- Course PDF export → `spec/course/CoursePdf.md`
-- Setup / layout / commands / DB data & date refresh / dev login seed → `docs/setup-notes.md`
-- Code review + CSO security findings, fixed vs. deferred → `docs/reviews/` (fix log:
-  `2026-07-17-fixes-applied.md` — password-hash fix done; other security items deferred to before-prod, see the Deferred table)
-- Writing security-sensitive code (auth, crypto, SQL, XSS) → `docs/sampleDevise/` (cautionary
-  before/after samples; per-framework catalogues for Web Forms / MVC 5 / ASP.NET Core)
-- What gstack learned here → `docs/learnings.md`
+## Task-specific — read the match first; detail + gotchas in [docs/reference-index.md](docs/reference-index.md)
+| When you're… | Read |
+|---|---|
+| Adding/changing a feature | `docs/conventions.md` |
+| Touching auth / JWT / roles / My Profile / password | `spec/auth/Auth.md` |
+| Working on Course PDF export | `spec/course/CoursePdf.md` |
+| Setting up / commands / DB & date refresh / dev seed | `docs/setup-notes.md` |
+| Checking security findings, fixed vs. deferred | `docs/reviews/` |
+| Writing security-sensitive code (auth, crypto, SQL, XSS) | `docs/sampleDevise/` |
+| Seeing what the app/UI looks like | `docs/screenshots/` |
+| Wanting what gstack learned here | `docs/learnings.md` |
