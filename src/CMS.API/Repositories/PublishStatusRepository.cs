@@ -42,14 +42,14 @@ public sealed class PublishStatusRepository : IPublishStatusRepository
         var sql = $@"
             SELECT {SelectColumns}
             FROM PublishStatus s
-            WHERE (@Keyword IS NULL OR s.Description LIKE '%' + @Keyword + '%')
+            WHERE (@Keyword IS NULL OR s.Description LIKE '%' + @Keyword + '%' ESCAPE '\')
               AND (@IsDraft IS NULL OR s.IsDraft = @IsDraft)
               AND (@IsPublished IS NULL OR s.IsPublished = @IsPublished)
               AND (@IsDiscontinued IS NULL OR s.IsDiscontinued = @IsDiscontinued)
             ORDER BY s.pkid ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
             query.IsDraft,
             query.IsPublished,
             query.IsDiscontinued,

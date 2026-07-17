@@ -3,6 +3,26 @@
 A full-stack CMS built from the existing database schema (`database/*.sql`) following
 `spec/code-gen.convention.md`. First feature: **CRUD AppRole** (系統管理 Admin → 角色 AppRole).
 
+## Screenshots
+
+A look at the running app — Angular 20 + PrimeNG frontend, .NET 9 API. Full captioned gallery:
+[`docs/screenshots/`](docs/screenshots/README.md).
+
+| Login (登入) | Course catalogue (課程) | Course PDF export (課程 PDF) |
+|:---:|:---:|:---:|
+| ![Login](docs/screenshots/01-login.png) | ![Course list](docs/screenshots/05-courses.png) | ![Course PDF](docs/screenshots/11-course-pdf.png) |
+| Bilingual login, JWT auth. | Sortable/filterable list; per-row PDF / view / edit / delete. | Server-rendered PDF (title, hours/price/credits, outline). |
+
+| My Profile (個人資料) | Featured promo items (上稿作業) | Roles — admin (角色 AppRole) |
+|:---:|:---:|:---:|
+| ![My Profile](docs/screenshots/09-profile-change-password.png) | ![Featured promo items](docs/screenshots/08-featured-promo-items.png) | ![AppRole](docs/screenshots/02-app-roles.png) |
+| View account/roles, edit name, change password. | Home-page featured slots. | Roles with N-N user assignment (admin-only). |
+
+**Role-based access** — the non-admin `Test` user sees no **系統管理 Admin** section (admin routes are
+guarded client-side and enforced server-side with `[Authorize(Roles="Admin")]`):
+
+![Role-gated menu](docs/screenshots/12-test-user-role-gated.png)
+
 ## Layout
 
 ```

@@ -7,11 +7,15 @@ import { AuthService } from './auth.service';
 const ROLE_URI = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
 const SESSION_KEY = 'cms.session';
 
-/** Builds a JWT-shaped token (header.payload.signature) with a base64url payload. */
+/**
+ * Builds a JWT-shaped token (header.payload.signature) with a base64url payload. A future `exp` is
+ * included by default (real backend tokens always carry one); pass `exp` in the payload to override.
+ */
 function makeJwt(payload: Record<string, unknown>): string {
   const enc = (obj: unknown) =>
     btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc(payload)}.signature`;
+  const withExp = { exp: Math.floor(Date.now() / 1000) + 3600, ...payload };
+  return `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc(withExp)}.signature`;
 }
 
 describe('AuthService', () => {
@@ -115,6 +119,25 @@ describe('AuthService', () => {
     // The session (and token) is untouched by a password change.
     expect(service.token).toBe(token);
     expect(service.userName()).toBe('Helen');
+  });
+
+  it('treats an expired token as unauthenticated and clears the stale session', () => {
+    // exp one hour in the past.
+    const token = makeJwt({ [ROLE_URI]: ['Admin'], exp: Math.floor(Date.now() / 1000) - 3600 });
+    service.setSession({ userId: 'a', userName: 'A', accessToken: token });
+
+    expect(service.isAuthenticated()).toBeFalse();
+    // The expired session is cleared, not left dangling.
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+  });
+
+  it('treats a token with no exp claim as unauthenticated (fail closed)', () => {
+    const enc = (obj: unknown) =>
+      btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const noExp = `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc({ [ROLE_URI]: ['Admin'] })}.signature`;
+    service.setSession({ userId: 'a', userName: 'A', accessToken: noExp });
+
+    expect(service.isAuthenticated()).toBeFalse();
   });
 
   it('clearSession removes the profile from session storage', () => {

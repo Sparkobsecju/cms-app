@@ -56,6 +56,23 @@ re-anchors the newest to today+30 with no drift):
 sqlcmd -S ".\SQLEXPRESS" -d CMS -E -C -i database/refresh-promo-dates.sql
 ```
 
+## Dev login seed
+
+The authenticated path needs a real `AppUser`. Dev-only login `Admin` / password `Admin`
+(`IsActive=1`, `Admin` role → 系統管理 menu) is seeded in the local `CMS` DB — **not** in
+`database/*.sql`. Recreate via upsert into `AppUser` (set `PasswordHash`, see below) plus a row in
+`AppUserRole('Admin','Admin')`.
+
+**Password hash scheme:** the canonical scheme is now **salted PBKDF2** (`Security/PasswordHasher.cs`),
+stored as `PBKDF2$SHA256$<iterations>$<salt>$<hash>` — a random salt per call, so it can't be written as
+a fixed SQL literal. For a quick dev seed you can still upsert the **legacy lowercase-hex SHA-256** of the
+password (e.g. `Admin`): login accepts it and **auto-migrates the row to PBKDF2 on the first successful
+sign-in**. To seed a PBKDF2 hash directly instead, compute it with `PasswordHasher.Hash("Admin")` (LINQPad
+/ a throwaway test) and paste the resulting string.
+
+Note: **Change Password** rejects `Admin` as a *new* password (needs ≥8 chars, 3-of-4 classes), so
+a rotated dev password looks like `Admin+-*/`.
+
 ## Backend detail
 
 - `IDbConnectionFactory` opens `SqlConnection` from connection string `CMS` (`appsettings.json`).

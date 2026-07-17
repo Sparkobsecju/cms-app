@@ -47,9 +47,21 @@ export class AuthService {
     return this._profile()?.accessToken ?? null;
   }
 
-  /** Whether there is a stored session. */
+  /**
+   * Whether there is a stored session with a still-valid (non-expired) token. An expired token is
+   * treated as signed out and the stale session is cleared, so the guard bounces to /login rather than
+   * letting the user in until the first 401.
+   */
   isAuthenticated(): boolean {
-    return this._profile() !== null;
+    const profile = this._profile();
+    if (profile === null) {
+      return false;
+    }
+    if (isTokenExpired(profile.accessToken)) {
+      this.clearSession();
+      return false;
+    }
+    return true;
   }
 
   /** Whether the signed-in user holds the given role (read from the token, no extra API call). */
@@ -110,7 +122,12 @@ function readSession(): AuthProfile | null {
   }
   try {
     const parsed = JSON.parse(raw) as Partial<AuthProfile>;
-    if (parsed && typeof parsed.accessToken === 'string' && parsed.accessToken) {
+    if (
+      parsed &&
+      typeof parsed.accessToken === 'string' &&
+      parsed.accessToken &&
+      !isTokenExpired(parsed.accessToken)
+    ) {
       return {
         userId: parsed.userId ?? '',
         userName: parsed.userName ?? '',
@@ -121,6 +138,19 @@ function readSession(): AuthProfile | null {
     // Corrupt session — treat as signed out.
   }
   return null;
+}
+
+/**
+ * Whether the JWT is past its `exp` (seconds since epoch). A token with no readable `exp` is treated
+ * as expired (fail closed). Applies a small skew so a token expiring this very second isn't accepted.
+ */
+function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  const exp = payload?.['exp'];
+  if (typeof exp !== 'number') {
+    return true;
+  }
+  return exp * 1000 <= Date.now();
 }
 
 /**

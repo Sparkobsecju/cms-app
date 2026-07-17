@@ -84,12 +84,22 @@ var app = builder.Build();
 // First in the pipeline: catch any unhandled exception and return a safe 500.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Swagger UI at /swagger.
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Swagger UI at /swagger — development only. In production the full API surface
+// (routes, verbs, DTO shapes) must not be exposed to anonymous callers.
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS API v1");
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "CMS API v1");
+    });
+}
+else
+{
+    // Enforce TLS outside development so bearer tokens / passwords never travel cleartext.
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(CorsPolicy);
 app.UseAuthentication();

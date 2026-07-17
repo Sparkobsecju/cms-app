@@ -17,7 +17,17 @@ public sealed class SqlConnectionFactory : IDbConnectionFactory
     public async Task<IDbConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
     {
         var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+        catch
+        {
+            // Open failed (transient fault, cancellation) — dispose so the half-built
+            // connection is returned to the pool instead of leaking under load.
+            await connection.DisposeAsync();
+            throw;
+        }
         return connection;
     }
 }

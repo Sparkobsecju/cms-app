@@ -29,8 +29,10 @@ public sealed class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearer
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = JwtTokenService.Issuer,
+            ValidateAudience = true,
+            ValidAudience = JwtTokenService.Audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1),
             ValidateIssuerSigningKey = true,

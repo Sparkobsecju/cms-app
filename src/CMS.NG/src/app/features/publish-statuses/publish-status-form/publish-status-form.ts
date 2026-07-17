@@ -35,7 +35,9 @@ export class PublishStatusForm implements OnInit {
   protected readonly recordPkid = signal<number | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
-    pkid: [null as number | null, Validators.required],
+    // 主代碼 is a byte-range code (0–255). Validate the range so an out-of-range value is flagged
+    // rather than silently clamped by the input.
+    pkid: [null as number | null, [Validators.required, Validators.min(0), Validators.max(255)]],
     description: ['', Validators.required],
     isDraft: [false],
     isPublished: [false],

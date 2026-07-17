@@ -32,8 +32,11 @@ public static class CoursePdfDocument
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();
 
+        // PdfDocument owns internal streams/state and is IDisposable — dispose it per request so the
+        // heavier PDF object graph is released promptly instead of lingering until GC under download load.
+        using var pdf = renderer.PdfDocument;
         using var stream = new MemoryStream();
-        renderer.PdfDocument.Save(stream, closeStream: false);
+        pdf.Save(stream, closeStream: false);
         return stream.ToArray();
     }
 

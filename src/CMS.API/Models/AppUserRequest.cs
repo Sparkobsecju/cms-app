@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CMS.API.Models;
 
 /// <summary>
@@ -8,9 +10,13 @@ namespace CMS.API.Models;
 public class AppUserRequest
 {
     /// <summary>Business primary key (帳號). Immutable on update.</summary>
+    [Required]
+    [MaxLength(200)]
     public string UserId { get; set; } = string.Empty;
 
     /// <summary>User display name (使用者名稱).</summary>
+    [Required]
+    [MaxLength(200)]
     public string UserName { get; set; } = string.Empty;
 
     /// <summary>Whether the account is active (啟用狀態). Defaults to true.</summary>

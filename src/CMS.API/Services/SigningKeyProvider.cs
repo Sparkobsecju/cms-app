@@ -15,6 +15,9 @@ namespace CMS.API.Services;
 /// </summary>
 public sealed class SigningKeyProvider : ISigningKeyProvider
 {
+    /// <summary>Minimum signing-key length: HMAC-SHA256 requires a 256-bit (32-byte) key.</summary>
+    public const int MinKeyBytes = 32;
+
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly object _gate = new();
     private SecurityKey? _cached;
@@ -63,6 +66,14 @@ public sealed class SigningKeyProvider : ISigningKeyProvider
         if (string.IsNullOrEmpty(secret))
         {
             throw new InvalidOperationException("SysConfig 'appConfig'.symmetricSecurityKey is empty.");
+        }
+
+        // HMAC-SHA256 needs a >=256-bit (32-byte) key; a short/low-entropy secret yields
+        // brute-forceable signatures. Fail closed rather than sign with a weak key.
+        if (Encoding.UTF8.GetByteCount(secret) < MinKeyBytes)
+        {
+            throw new InvalidOperationException(
+                $"SysConfig 'appConfig'.symmetricSecurityKey must be at least {MinKeyBytes} bytes for HMAC-SHA256.");
         }
 
         return secret;

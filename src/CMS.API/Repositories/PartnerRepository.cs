@@ -45,14 +45,14 @@ public sealed class PartnerRepository : IPartnerRepository
             SELECT {SelectColumns}
             FROM Partner p
             WHERE (@Keyword IS NULL
-                OR p.Name LIKE '%' + @Keyword + '%'
-                OR p.AppKey LIKE '%' + @Keyword + '%'
-                OR p.NameOnPartnerMenu LIKE '%' + @Keyword + '%'
-                OR p.NameOnCourseDetailPage LIKE '%' + @Keyword + '%')
+                OR p.Name LIKE '%' + @Keyword + '%' ESCAPE '\'
+                OR p.AppKey LIKE '%' + @Keyword + '%' ESCAPE '\'
+                OR p.NameOnPartnerMenu LIKE '%' + @Keyword + '%' ESCAPE '\'
+                OR p.NameOnCourseDetailPage LIKE '%' + @Keyword + '%' ESCAPE '\')
             ORDER BY p.DisplayOrder ASC, p.pkid ASC;";
         var parameters = new
         {
-            Keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim(),
+            Keyword = SqlLike.EscapeWildcards(string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim()),
         };
         var rows = await connection.QueryAsync<Partner>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
         return rows.AsList();
