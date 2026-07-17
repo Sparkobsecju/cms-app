@@ -1,0 +1,55 @@
+name: CI
+
+# Build + test both stacks on every push to and PR against the long-lived branches.
+# These job names (backend-tests, frontend-tests) are the status-check contexts that
+# branch protection on main/develop requires to pass before merge.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: backend-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Restore
+        run: dotnet restore src/CMS.slnx
+      - name: Build
+        run: dotnet build src/CMS.slnx --no-restore --configuration Release
+      # Backend unit tests need no database (see cms-app/CLAUDE.md).
+      - name: Test
+        run: dotnet test src/CMS.slnx --no-build --configuration Release --verbosity normal
+
+  frontend-tests:
+    name: frontend-tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/CMS.NG
+    env:
+      # ubuntu-latest ships Google Chrome; Karma's ChromeHeadless launcher uses this.
+      CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/CMS.NG/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Test
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+      - name: Build
+        run: npx ng build
