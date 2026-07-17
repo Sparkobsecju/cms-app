@@ -1,10 +1,14 @@
 using CMS.API.Models;
 using CMS.API.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
 
 /// <summary>CRUD endpoints for system users (使用者). Passwords are never exposed or accepted.</summary>
+// Administrative surface: require the Admin role, not merely an authenticated session. The global
+// fallback policy only enforces authentication; user management must be gated by role.
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/appusers")]
 [Produces("application/json")]

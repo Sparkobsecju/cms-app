@@ -5,5 +5,7 @@ export function saveBlob(blob: Blob, filename: string): void {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // Revoke on the next tick: the download starts asynchronously, so revoking synchronously after
+  // click() can invalidate the URL before the browser begins fetching it and abort the download.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
