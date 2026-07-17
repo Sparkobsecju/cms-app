@@ -9,8 +9,14 @@ not every session.
 (RowAudit, global exception / HTTP-error handling), reference-feature catalog, build
 order. Canonical patterns: [spec/code-gen.convention.md](../spec/code-gen.convention.md).
 
-## Auth / login / JWT / My Profile / Change Password
-[spec/auth/Auth.md](../spec/auth/Auth.md).
+## Auth / login / JWT / role authz / My Profile / Change Password
+[spec/auth/Auth.md](../spec/auth/Auth.md). **Role-based authorization** (added 2026-07-17):
+the global fallback policy enforces *authentication* on every endpoint; admin controllers
+(`AppUsers`/`AppRoles`/`PublishStatuses`) additionally carry `[Authorize(Roles="Admin")]`,
+and the Angular admin routes are wrapped in `roleGuard('Admin')` (`core/guards/role.guard.ts`) —
+the sidebar 系統管理 filter is UX-only. Seed role id `Admin` (via `AppUserRole('Admin','Admin')`);
+dev login `Admin`/`Admin` holds it. Auth guard also rejects expired JWTs (fail-closed), and the
+HTTP interceptor attaches the bearer token only to same-origin API requests.
 
 ## Course PDF export
 [spec/course/CoursePdf.md](../spec/course/CoursePdf.md) — full feature spec. Design
@@ -24,3 +30,15 @@ surfaces a warn toast, not a broken download.
 ## Setup, layout, full command reference, DB data & date refresh, dev login seed, design rationale
 [setup-notes.md](setup-notes.md). `database/*.sql` is schema only — an empty
 date-windowed list usually means the data predates the window (→ *Database data*).
+
+## Code review findings + remediation status
+[reviews/2026-07-16-project-review.md](reviews/2026-07-16-project-review.md) — full-project
+audit (0 P0, 12 P1, 13 P2, by area §4.x). [reviews/2026-07-17-fixes-applied.md](reviews/2026-07-17-fixes-applied.md)
+— remediation log: what's fixed vs. what's still open, ranked. **Read the fix log before
+touching auth, the data layer, or Course PDF** so you don't redo done work or reopen a
+deferred item without its context. Update the log each remediation pass.
+
+## Project learnings (cross-session)
+[learnings.md](learnings.md) — patterns/pitfalls gstack captured (Course PDF is backend-only,
+browse ref instability, the now-resolved missing role guard). Export from the store with
+`/learn export`; add with `/learn add`.

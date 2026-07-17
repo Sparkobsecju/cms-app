@@ -76,7 +76,8 @@ Built by `JwtTokenService` (`Services/JwtTokenService.cs`, `IJwtTokenService`):
     name `RowAuditWriter` reads** to attribute audit rows once tokens are validated.
   - `sub` (`JwtRegisteredClaimNames.Sub`) = `UserId`
   - one role claim per `RoleId`, type `ClaimTypes.Role` (constant `JwtTokenService.RoleClaimType`)
-    — the .NET default so `[Authorize(Roles=…)]` works once validation is wired up.
+    — the .NET default so `[Authorize(Roles=…)]` works. **Now wired** (2026-07-17): admin controllers
+    carry `[Authorize(Roles="Admin")]` — see *Authorization* below.
 - **Lifetime**: `JwtTokenService.TokenLifetime = 24h`; the token expires 24h after issue
   (`notBefore = UtcNow`, `expires = UtcNow + 24h`).
 - **Claim-name fidelity**: the handler's **per-instance** `OutboundClaimTypeMap` is `Clear()`ed
@@ -307,13 +308,20 @@ Run: `dotnet test src/CMS.API.Tests/CMS.API.Tests.csproj` (no DB required).
   attribute sits on the action, not the controller, so every other `AuthController` action — e.g.
   `profile` below — still requires a token). `app.UseAuthentication()` precedes `app.UseAuthorization()`. Tests:
   `AuthorizationTests` (WebApplicationFactory) — protected endpoint 401 without / 401 invalid / 200
-  with a valid token; `/api/Auth/login` reachable anonymously.
+  with a valid token; authenticated non-admin → **403** on an admin endpoint; `/api/Auth/login` reachable anonymously.
+- **Role authorization** (added 2026-07-17) — the fallback only enforces *authentication*; admin
+  controllers `AppUsers`/`AppRoles`/`PublishStatuses` additionally carry `[Authorize(Roles="Admin")]`
+  (authenticated non-admin → 403). The public `CoursePdfController` scopes `[AllowAnonymous]` to its
+  single PDF action. Outside Development the pipeline also runs `UseHsts()` + `UseHttpsRedirection()`,
+  and Swagger is dev-only. See [`docs/reviews/2026-07-17-fixes-applied.md`](../../docs/reviews/2026-07-17-fixes-applied.md).
 - **Frontend** — real `/login` page posts to `POST /api/Auth/login`; `AuthService` stores the
   `{ userId, userName, accessToken }` profile in **session** storage and exposes roles decoded from
-  the token; `authInterceptor` attaches `Authorization: Bearer`; `authGuard` (on all routes but
-  `/login`) redirects to `/login` when signed out; a 401 clears the session and redirects (error
-  interceptor); the shell shows the signed-in name + logout and gates the 系統管理 Admin menu on the
-  `Admin` role. Specs cover each of these.
+  the token; `authInterceptor` attaches `Authorization: Bearer` **only to same-origin API requests**;
+  `authGuard` (on all routes but `/login`) redirects to `/login` when signed out **or the JWT is
+  expired** (fail-closed, clears the stale session); admin routes additionally sit under
+  `roleGuard('Admin')` (`core/guards/role.guard.ts`) — a denied non-admin is sent to `/courses`, and
+  the 系統管理 Admin menu filter is UX-only, no longer the sole gate; a 401 clears the session and
+  redirects (error interceptor). Specs cover each of these.
 
 ---
 
