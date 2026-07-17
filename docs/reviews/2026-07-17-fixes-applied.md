@@ -16,6 +16,47 @@
 
 ---
 
+## 🔐 CSO audit pass (2026-07-17) — full-project security review
+
+Ran `/cso` (daily mode, 8/10 confidence gate) over the **entire project** — first CSO-scoped review.
+Report saved to `.gstack/security-reports/2026-07-17-033421.json` (gitignored).
+
+**Surface checked clean:** SQL injection (all Dapper-parameterized; interpolated fragments are
+compile-time constants), JWT validation (iss/aud/lifetime/≥32-byte key all enforced, symmetric-only),
+role-based access control on admin controllers, committed secrets (none — key/password seeded to DB at
+setup, git history clean), XSS (Angular auto-escape, no `innerHTML`/trust-bypass sinks), SSRF (PDF path
+strips HTML to plain text, no remote fetch), CORS (loopback-only origins). No CI/CD, containers, or
+webhooks in the repo.
+
+**One HIGH finding — fixed this pass:**
+
+- **Unsalted SHA-256 password hashing → salted PBKDF2 + lazy migration** (OWASP A02).
+  `PasswordHasher.Hash` was single-round unsalted SHA-256 (`SHA256.HashData(...)`), a fast hash with no
+  salt — on any DB exposure, all hashes fall to rainbow tables / GPU cracking, and identical passwords
+  produced identical hashes. Replaced with **PBKDF2** (HMAC-SHA256, 128-bit random per-user salt, 100k
+  iterations), stored self-describing as `PBKDF2$SHA256$<iterations>$<salt>$<hash>`.
+  - `PasswordHasher.Verify(password, stored, out needsRehash)` handles both formats; deprecated SHA-256
+    hex hashes still verify and set `needsRehash`. Constant-time compares (`CryptographicOperations.FixedTimeEquals`).
+  - Password checks moved **out of SQL into code** (salted hashes can't be compared in a `WHERE`):
+    `ValidateCredentialsAsync` and `VerifyCurrentPasswordAsync` now fetch the hash (server-side only,
+    never projected to the client) and verify in-process.
+  - **Migrate-on-next-login:** a successful login against a legacy hash re-hashes the verified plaintext
+    under PBKDF2 and persists it — no forced reset. `PasswordUpdatedTime` is left untouched (format
+    changed, not the password).
+  - Admin create/reset (`AppUserRepository.ReadDefaultPasswordHashAsync`) now uses the shared PBKDF2
+    hasher, so two users on the same default password no longer share a stored hash.
+  - *Files: `Security/PasswordHasher.cs`, `Repositories/AuthRepository.cs`, `Repositories/AppUserRepository.cs`,
+    `Repositories/IAuthRepository.cs` (doc comments), `CMS.API.Tests/AuthControllerTests.cs` (tests updated:
+    PBKDF2 round-trip + legacy-verify-flags-rehash).*
+  - **Verification:** `dotnet build CMS.slnx` → 0 warnings / 0 errors; `dotnet test` → **184 passed**.
+
+**Below the reporting bar (verify intent, not fixed):** content controllers are auth-gated but not
+`Roles="Admin"` (fine if all users are Admin-class); DB connection `Encrypt=False` is safe for local
+SQLEXPRESS but must not carry to a remote prod DB; 24h JWT has no revocation. All three already tracked
+in the "Remaining" list below.
+
+---
+
 ## ✅ Fixed in this pass
 
 ### Security-blocking (P1)
@@ -139,11 +180,9 @@
 
 ### P1 still open (each needs a schema/DB change, a load test, or a large test harness — deliberately deferred)
 
-- **Password hashing → salted KDF** (§4.1, PasswordHasher.cs / AuthRepository.cs / AppUserRepository.cs).
-  Biggest change. Comparison currently happens *in SQL* (`WHERE PasswordHash = @PasswordHash`); a real
-  KDF (PBKDF2 `PasswordHasher<T>` / Argon2id / bcrypt) needs per-hash salt, so the SQL must change to
-  *fetch* the hash and verify **in code**, plus a migrate-on-next-login path for existing SHA-256 hashes.
-  Touches login, reset-password, change-password, create-user. Do this behind tests (see below) first.
+- ~~**Password hashing → salted KDF** (§4.1)~~ — **done in the CSO pass (2026-07-17), see the
+  "🔐 CSO audit pass" section above.** Replaced unsalted SHA-256 with salted PBKDF2 (100k iterations),
+  moved verification from SQL into code, added migrate-on-next-login for existing hashes. 184 tests pass.
 - **Optimistic concurrency (rowversion)** on updates (§4.2) — needs a `rowversion` column + migration;
   `Course/AppUser/AppRole/Partner/FeaturedPromoItem` repos; return 409 on `affected == 0`.
 - **`MoveSlotAsync` race** (§4.2) — `UPDLOCK, HOLDLOCK` on the initial SELECT or `SERIALIZABLE`.
@@ -177,9 +216,42 @@
 
 ---
 
+## 🕒 Deferred — remaining security findings (decision 2026-07-17)
+
+**Decision:** the security findings still open after the CSO pass are **deferred**, not dropped. The one
+HIGH finding (password hashing) is fixed; everything below is a conscious defer with a review trigger.
+
+**Review trigger:** revisit **before the first production deployment**, or by **2026-08-17** (one month),
+whichever comes first. Production-gated items *must* be closed before go-live — they are not optional, only
+not-yet-actionable while the app runs local/dev only.
+
+| # | Finding | Why deferred | Gate |
+|---|---------|--------------|------|
+| D1 | **Login rate-limiting / account lockout** (§4.1) | Brute-force risk; excluded from the CSO gate as rate-limit/DoS, but real. Accepted for now (internal, single-admin dev use). | Before prod |
+| D2 | **Shorter access token + refresh/revocation + security-stamp on password change** (§4.1) | 24h stateless JWT has no revocation; a leaked token stays valid. Accepted for now. | Before prod |
+| D3 | **Per-environment (non-shared) JWT signing key** (§4.1) | Can't finalize until the deploy target/secret store exists. | Before prod (blocker) |
+| D4 | **Gate CORS to Development + explicit prod origin allow-list + security headers** (CSP, X-Content-Type-Options) (§4.4) | Loopback-only CORS is safe in dev; prod origins are unknown until deploy. | Before prod (blocker) |
+| D5 | **JWT in `sessionStorage` → httpOnly+Secure+SameSite cookie + CSP** (§4.5) | Architectural change; no XSS sink exists today, so risk is bounded. | Before prod |
+| D6 | **Remote-DB TLS**: `Encrypt=False;TrustServerCertificate=True` is safe for local `.\SQLEXPRESS` only | Must not carry to a remote prod DB (cleartext/MITM). | Before prod (blocker) |
+| D7 | **`environment.ts` production URL** still `http://localhost:5000/api` (§4.5) | Real origin unknown; guessing would be wrong. Consider failing the build if a `production` env contains `localhost`/`http://`. | Before prod (blocker) |
+| D8 | **Content controllers Admin-gating** (CSO observation) — Courses/CourseGroups/Partners/FeaturedPromoItems/Lookups/RowAudit are auth-gated but not `[Authorize(Roles="Admin")]` | Fine **iff** every user is Admin-class. Needs a product decision on whether a lower-privilege role should be denied catalogue writes. | Needs intent decision |
+
+**Security test gaps** (verify the above behaviours; deferred with them): `AuthRepository` execution-level
+tests (fetch-and-verify + migrate-on-next-login), and JWT wrong-key-signed → 401 / past-expiry → 401
+integration tests (§4.6).
+
+> The individual bullets remain in the P1/P2 lists below with their implementation notes; this table is the
+> decision record. When a deferred item is picked up, move it to "Fixed" and strike its row here.
+
+---
+
 ## Notes for the next pass
 - The `Admin` role id is seeded via `AppUserRole('Admin','Admin')` (see `docs/setup-notes.md`); dev
   login `Admin`/`Admin` holds it, so the new role gates don't lock the dev user out.
-- Before the KDF change, add the `AuthRepository` SQL tests first — they are the safety net that lets
-  you refactor password verification from SQL into code with confidence.
+- ~~Before the KDF change, add the `AuthRepository` SQL tests first~~ — the KDF change shipped in the
+  CSO pass, verified by `PasswordHasher` unit tests + the existing 184 controller/mock tests.
+  **Residual gap (honest):** there are still no execution-level (SQLite-backed) tests for
+  `AuthRepository`'s new *fetch-and-verify-in-code* path or the *migrate-on-next-login* UPDATE. Add these
+  next to lock in that (a) a legacy hash upgrades to PBKDF2 exactly once on login, (b) `PasswordHash` is
+  never projected to a DTO, (c) `IsActive=0` still returns null.
 - Keep this log current: when you fix a "Remaining" item, move it up to "Fixed" with its file(s).

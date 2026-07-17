@@ -38,6 +38,13 @@ audit (0 P0, 12 P1, 13 P2, by area §4.x). [reviews/2026-07-17-fixes-applied.md]
 touching auth, the data layer, or Course PDF** so you don't redo done work or reopen a
 deferred item without its context. Update the log each remediation pass.
 
+## Cautionary code samples — "don't code like this"
+[sampleDevise/](sampleDevise/README.md) — a teaching archive of real defects found here, each with the
+before/after code, the **concrete attack scenario** that makes the pattern dangerous, and a one-line rule.
+Read before writing security-sensitive code. First entry:
+[01 — unsalted SHA-256 password hashing](sampleDevise/01-password-hashing-unsalted-sha256.md) (why a fast
+hash is wrong for passwords, why salted hashes can't be compared in SQL, and safe lazy migration).
+
 ## Project learnings (cross-session)
 [learnings.md](learnings.md) — patterns/pitfalls gstack captured (Course PDF is backend-only,
 browse ref instability, the now-resolved missing role guard). Export from the store with

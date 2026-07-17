@@ -7,9 +7,10 @@ public interface IAuthRepository
 {
     /// <summary>
     /// Verifies the supplied credentials against <c>AppUser</c>: the <c>UserId</c> must match exactly,
-    /// <c>IsActive</c> must be 1, and <c>PasswordHash</c> must equal the SHA-256 of the supplied
-    /// password. Returns the authenticated user (with role ids) on success, or <c>null</c> if any check
-    /// fails. The password hash never leaves this method.
+    /// <c>IsActive</c> must be 1, and the supplied password must verify against the stored
+    /// <c>PasswordHash</c> (PBKDF2; deprecated unsalted SHA-256 hashes are accepted and transparently
+    /// upgraded to PBKDF2 on success). Returns the authenticated user (with role ids) on success, or
+    /// <c>null</c> if any check fails. The password hash never leaves this method.
     /// </summary>
     Task<AuthenticatedUser?> ValidateCredentialsAsync(string userId, string password, CancellationToken cancellationToken = default);
 
@@ -30,13 +31,13 @@ public interface IAuthRepository
 
     /// <summary>
     /// Verifies that <paramref name="currentPassword"/> matches the stored <c>PasswordHash</c> for
-    /// <paramref name="userId"/>. The comparison is done in SQL (the hash is passed as a parameter, never
-    /// selected out), so the stored hash never leaves this method. Returns <c>true</c> on a match.
+    /// <paramref name="userId"/>. The stored hash is read into the method and verified in-process (it is
+    /// never projected to the client), so it never leaves the repository. Returns <c>true</c> on a match.
     /// </summary>
     Task<bool> VerifyCurrentPasswordAsync(string userId, string currentPassword, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sets the given user's <c>PasswordHash</c> to the SHA-256 hash of <paramref name="newPassword"/> and
+    /// Sets the given user's <c>PasswordHash</c> to the PBKDF2 hash of <paramref name="newPassword"/> and
     /// stamps <c>PasswordUpdatedTime</c> with the current time, in a single update. The plaintext is hashed
     /// inside this method and never stored or returned. Returns <c>true</c> when a row was updated,
     /// <c>false</c> when no user with that id exists. Not row-audited (a self-service action, like the
